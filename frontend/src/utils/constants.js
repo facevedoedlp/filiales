@@ -1,0 +1,7 @@
+export const ROLES = {
+  ADMIN: 'ADMIN',
+  COORDINADOR: 'COORDINADOR',
+  FILIAL: 'FILIAL',
+};
+
+export const FORO_CATEGORIAS = ['GENERAL', 'EVENTOS', 'CONSULTAS', 'ANUNCIOS'];

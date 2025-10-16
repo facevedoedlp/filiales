@@ -13,6 +13,6 @@ export const validate = (schema) => async (req, res, next) => {
     return next();
   } catch (error) {
     const issues = error.issues?.map((issue) => issue.message) ?? [error.message];
-    return errorResponse(res, issues.join(', '), 400);
+    return errorResponse(res, issues.join(', '), 400, 'VALIDATION_ERROR');
   }
 };

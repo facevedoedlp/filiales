@@ -8,5 +8,5 @@ export const errorHandler = (err, req, res, next) => {
     console.error(err);
   }
 
-  return errorResponse(res, message, status);
+  return errorResponse(res, message, status, err.code || 'INTERNAL_ERROR');
 };

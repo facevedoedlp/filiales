@@ -69,6 +69,7 @@ export const getFilial = async (id) => {
   if (!filial) {
     const error = new Error('Filial no encontrada');
     error.status = 404;
+    error.code = 'FILIAL_NOT_FOUND';
     throw error;
   }
 

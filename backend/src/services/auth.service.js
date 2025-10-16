@@ -11,6 +11,7 @@ export const login = async ({ correo, password }) => {
   if (!user) {
     const error = new Error('Credenciales inválidas');
     error.status = 401;
+    error.code = 'AUTH_INVALID_CREDENTIALS';
     throw error;
   }
 
@@ -18,6 +19,7 @@ export const login = async ({ correo, password }) => {
   if (!isValid) {
     const error = new Error('Credenciales inválidas');
     error.status = 401;
+    error.code = 'AUTH_INVALID_CREDENTIALS';
     throw error;
   }
 
@@ -49,6 +51,7 @@ export const refresh = async ({ token }) => {
   } catch (error) {
     const err = new Error('Token inválido');
     err.status = 401;
+    err.code = 'AUTH_TOKEN_INVALID';
     throw err;
   }
 };
@@ -71,6 +74,7 @@ export const me = async (userId) => {
   if (!user) {
     const error = new Error('Usuario no encontrado');
     error.status = 404;
+    error.code = 'USER_NOT_FOUND';
     throw error;
   }
 

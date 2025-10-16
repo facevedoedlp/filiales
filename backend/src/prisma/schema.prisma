@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  COORDINADOR
+  FILIAL
+}
+
+model Usuario {
+  id              Int               @id @default(autoincrement())
+  nombre          String
+  correo          String            @unique
+  password        String
+  rol             Rol               @default(FILIAL)
+  esActivo        Boolean           @default(true)
+  filialId        Int?
+  coordinadorId   Int?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  filial          Filial?           @relation(fields: [filialId], references: [id])
+  coordinador     Coordinador?      @relation(fields: [coordinadorId], references: [id])
+  acciones        Accion[]
+  foroPosts       ForoTema[]
+  foroRespuestas  ForoRespuesta[]
+  notificaciones  Notificacion[]
+}
+
+model Filial {
+  id                    Int                  @id @default(autoincrement())
+  nombre                String
+  paisId                Int
+  provinciaId           Int
+  departamentoId        Int?
+  localidadId           Int
+  nombreLocalidad       String
+  direccionSede         String?
+  coordenadas           String?
+  kmDesdeEstadio        Int?
+  esActiva              Boolean              @default(true)
+  esHabilitada          Boolean              @default(false)
+  situacion             String?
+  grupoId               Int?
+  fechaFundacion        DateTime?
+  renovacionAutoridades DateTime?
+  esRenovada            Boolean              @default(false)
+  periodoRenovacion     Boolean              @default(false)
+  telefono              String?
+  mailInstitucional     String?
+  mailAlternativo       String?
+  actaConstitutiva      String?
+  escudo                String?
+  planillaIntegrantes   String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  pais                  Pais                 @relation(fields: [paisId], references: [id])
+  provincia             Provincia            @relation(fields: [provinciaId], references: [id])
+  localidad             Localidad            @relation(fields: [localidadId], references: [id])
+  grupo                 Grupo?               @relation(fields: [grupoId], references: [id])
+  integrantes           Integrante[]
+  usuarios              Usuario[]
+  acciones              Accion[]
+  entradasPedidos       EntradaPedido[]
+}
+
+model Integrante {
+  id                    Int                     @id @default(autoincrement())
+  filialId              Int
+  nombre                String
+  dni                   String?
+  fechaNacimiento       DateTime?
+  ocupacion             String?
+  telefono              String?
+  email                 String?
+  esActivo              Boolean                 @default(true)
+  esReferente           Boolean                 @default(false)
+  cargoId               Int?
+  numeroSocio           String?
+  esParticipativo       Boolean                 @default(false)
+  asistenteActa         Boolean                 @default(false)
+  usuarioIngreso        String?
+  fechaIngreso          DateTime                @default(now())
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  filial                Filial                  @relation(fields: [filialId], references: [id])
+  cargo                 Cargo?                  @relation(fields: [cargoId], references: [id])
+  historialInactividad  HistorialInactividad[]
+}
+
+model Accion {
+  id                 Int          @id @default(autoincrement())
+  tipo               String
+  filialId           Int?
+  fechaRealizacion   DateTime
+  calendarioId       Int?
+  descripcion        String
+  ubicacion          String?
+  otrosColaboradores String?
+  encargadoId        Int?
+  imagenPromocion    String?
+  imagen1            String?
+  imagen2            String?
+  observaciones      String?
+  enviarCorreo       Boolean      @default(false)
+  usuarioCorreo      String?
+  fechaCarga         DateTime     @default(now())
+  createdAt          DateTime     @default(now())
+
+  filial             Filial?      @relation(fields: [filialId], references: [id])
+  calendario         Calendario?  @relation(fields: [calendarioId], references: [id])
+  usuario            Usuario?     @relation(fields: [encargadoId], references: [id])
+}
+
+model EntradaPedido {
+  id               Int          @id @default(autoincrement())
+  tipo             String
+  filialId         Int?
+  nombre           String
+  localidadId      Int?
+  procedencia      String?
+  dni              String?
+  fixtureId        Int
+  estadoCarga      Boolean      @default(false)
+  entradaAsignada  Boolean      @default(false)
+  aprobacionSocios String       @default("SIN REVISAR")
+  enviarTelegram   Boolean      @default(false)
+  observaciones    String?
+  listadoExcel     Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  filial           Filial?      @relation(fields: [filialId], references: [id])
+  fixture          Calendario   @relation(fields: [fixtureId], references: [id])
+}
+
+model ForoTema {
+  id          Int              @id @default(autoincrement())
+  titulo      String
+  contenido   String
+  categoria   String           @default("GENERAL")
+  usuarioId   Int
+  esDestacado Boolean          @default(false)
+  esCerrado   Boolean          @default(false)
+  vistas      Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  usuario     Usuario          @relation(fields: [usuarioId], references: [id])
+  respuestas  ForoRespuesta[]
+  etiquetas   ForoEtiqueta[]
+}
+
+model ForoRespuesta {
+  id          Int       @id @default(autoincrement())
+  temaId      Int
+  contenido   String
+  usuarioId   Int
+  esDestacada Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tema        ForoTema  @relation(fields: [temaId], references: [id], onDelete: Cascade)
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
+}
+
+model ForoEtiqueta {
+  id      Int        @id @default(autoincrement())
+  nombre  String     @unique
+  color   String?
+  temas   ForoTema[]
+}
+
+model Notificacion {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  tipo      String
+  titulo    String
+  mensaje   String
+  leida     Boolean  @default(false)
+  url       String?
+  createdAt DateTime @default(now())
+
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model Pais {
+  id        Int        @id @default(autoincrement())
+  nombre    String
+  filiales  Filial[]
+}
+
+model Provincia {
+  id        Int        @id @default(autoincrement())
+  nombre    String
+  paisId    Int
+  pais      Pais       @relation(fields: [paisId], references: [id])
+  filiales  Filial[]
+}
+
+model Localidad {
+  id           Int        @id @default(autoincrement())
+  nombre       String
+  provinciaId  Int
+  provincia    Provincia  @relation(fields: [provinciaId], references: [id])
+  filiales     Filial[]
+}
+
+model Grupo {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  filiales  Filial[]
+}
+
+model Coordinador {
+  id        Int        @id @default(autoincrement())
+  nombre    String
+  usuarios  Usuario[]
+}
+
+model Cargo {
+  id          Int          @id @default(autoincrement())
+  nombre      String
+  integrantes Integrante[]
+}
+
+model Calendario {
+  id        Int        @id @default(autoincrement())
+  titulo    String
+  fecha     DateTime
+  acciones  Accion[]
+  fixtures  EntradaPedido[]
+}
+
+model HistorialInactividad {
+  id          Int        @id @default(autoincrement())
+  integranteId Int
+  motivo      String
+  fechaInicio DateTime
+  fechaFin    DateTime?
+  integrante  Integrante @relation(fields: [integranteId], references: [id])
+}

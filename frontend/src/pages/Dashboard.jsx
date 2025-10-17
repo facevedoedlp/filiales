@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { CalendarClock, Flag, MessageSquare, Ticket, Users } from 'lucide-react';
 import { useFiliales } from '../hooks/useFiliales.js';
-import { useIntegrantes } from '../hooks/useIntegrantes.js';
 import { useAcciones } from '../hooks/useAcciones.js';
 import { usePedidosEntradas, useFixture } from '../hooks/useEntradas.js';
 import { useTemas } from '../hooks/useForo.js';
@@ -10,27 +9,42 @@ import Loading from '../components/common/Loading.jsx';
 import Badge from '../components/common/Badge.jsx';
 
 const Dashboard = () => {
-  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({ page: 1, limit: 5, esActiva: true });
-  const { data: integrantesData, isLoading: loadingIntegrantes } = useIntegrantes({ page: 1, limit: 5 });
-  const { data: accionesData, isLoading: loadingAcciones } = useAcciones({ page: 1, limit: 5 });
-  const { data: pedidosData } = usePedidosEntradas({ page: 1, limit: 5, aprobacionSocios: 'PENDIENTE' });
+  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({
+    page: 1,
+    limit: 200,
+    esActiva: true,
+  });
+  const { data: accionesData, isLoading: loadingAcciones } = useAcciones({
+    page: 1,
+    limit: 5,
+  });
+  const { data: pedidosData } = usePedidosEntradas({
+    page: 1,
+    limit: 5,
+    aprobacionSocios: 'PENDIENTE',
+  });
   const { data: fixtureData } = useFixture({ proximos: true, limit: 5 });
   const { data: temasData } = useTemas({ page: 1, limit: 5, orden: 'recientes' });
   const { data: notificacionesData } = useNotificaciones({ leida: false });
 
   const filialesTotal = filialesData?.data?.pagination?.total ?? 0;
-  const integrantesTotal = integrantesData?.data?.pagination?.total ?? 0;
+  const integrantesTotal =
+    filialesData?.data?.items?.reduce((sum, filial) => {
+      return sum + (filial._count?.integrantes || filial.totalIntegrantesActivos || 0);
+    }, 0) ?? 0;
+
   const accionesMes = (accionesData?.data?.items || []).filter((accion) => {
-    const fecha = new Date(accion.fecha);
+    const fecha = new Date(accion.fechaRealizacion || accion.fecha);
     const hoy = new Date();
     return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
   }).length;
+
   const pedidosPendientes = pedidosData?.data?.pagination?.total ?? 0;
 
-  const isLoading = loadingFiliales || loadingIntegrantes || loadingAcciones;
+  const isLoading = loadingFiliales || loadingAcciones;
 
   if (isLoading) {
-    return <Loading message="Preparando tu tablero" />;
+    return <Loading message="Preparando tu tablero..." />;
   }
 
   return (
@@ -74,15 +88,22 @@ const Dashboard = () => {
           {accionesData?.data?.items?.length ? (
             <ul className="space-y-3 text-sm text-slate-600">
               {accionesData.data.items.slice(0, 5).map((accion) => (
-                <li key={accion.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3">
+                <li
+                  key={accion.id}
+                  className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
+                >
                   <div>
-                    <p className="font-semibold text-slate-800">{accion.titulo}</p>
+                    <p className="font-semibold text-slate-800">
+                      {accion.descripcion || accion.titulo || 'Sin título'}
+                    </p>
                     <p className="text-xs text-slate-500">
-                      {new Intl.DateTimeFormat('es-AR', { dateStyle: 'short' }).format(new Date(accion.fecha))} ·{' '}
-                      {accion.filialNombre}
+                      {new Intl.DateTimeFormat('es-AR', { dateStyle: 'short' }).format(
+                        new Date(accion.fechaRealizacion || accion.fecha),
+                      )}{' '}
+                      · {accion.filial?.nombre || accion.filialNombre || 'Sin filial'}
                     </p>
                   </div>
-                  <Badge variant="info">{accion.tipo}</Badge>
+                  <Badge variant="info">{accion.tipo || 'Acción'}</Badge>
                 </li>
               ))}
             </ul>
@@ -95,12 +116,15 @@ const Dashboard = () => {
           {temasData?.data?.items?.length ? (
             <ul className="space-y-3 text-sm text-slate-600">
               {temasData.data.items.slice(0, 5).map((tema) => (
-                <li key={tema.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3">
+                <li
+                  key={tema.id}
+                  className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
+                >
                   <div>
                     <p className="font-semibold text-slate-800">{tema.titulo}</p>
-                    <p className="text-xs text-slate-500">{tema.autorNombre}</p>
+                    <p className="text-xs text-slate-500">{tema.usuario?.nombre || tema.autorNombre}</p>
                   </div>
-                  <Badge variant="neutral">{tema.totalRespuestas} respuestas</Badge>
+                  <Badge variant="neutral">{tema._count?.respuestas || tema.totalRespuestas || 0} respuestas</Badge>
                 </li>
               ))}
             </ul>
@@ -128,7 +152,10 @@ const Dashboard = () => {
           {fixtureData?.data?.items?.length ? (
             <ul className="space-y-3 text-sm text-slate-600">
               {fixtureData.data.items.map((fixture) => (
-                <li key={fixture.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3">
+                <li
+                  key={fixture.id}
+                  className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
+                >
                   <div>
                     <p className="font-semibold text-slate-800">{fixture.rival}</p>
                     <p className="text-xs text-slate-500">
@@ -168,18 +195,20 @@ const SummaryCard = ({ icon: Icon, title, value, subtitle }) => (
 
 const Card = ({ title, children, linkLabel, linkTo }) => (
   <div className="rounded-2xl border border-slate-200 bg-white p-6">
-    <div className="flex items-center justify-between">
+    <div className="mb-4 flex items-center justify-between">
       <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
       <Link to={linkTo} className="text-sm font-medium text-red-600 hover:underline">
         {linkLabel}
       </Link>
     </div>
-    <div className="mt-4">{children}</div>
+    <div>{children}</div>
   </div>
 );
 
 const EmptyContent = ({ message }) => (
-  <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">{message}</p>
+  <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500">
+    {message}
+  </p>
 );
 
 export default Dashboard;

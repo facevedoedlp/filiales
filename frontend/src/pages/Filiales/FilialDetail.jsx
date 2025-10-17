@@ -22,7 +22,7 @@ const FilialDetail = () => {
   const {
     data: integrantesData,
     isLoading: loadingIntegrantes,
-  } = useIntegrantes({ filialId: id, page: 1, limit: 20, esActivo: true });
+  } = useIntegrantes({ filial_id: id, page: 1, limit: 20, es_activo: true });
 
   const filial = data?.data;
 
@@ -53,10 +53,10 @@ const FilialDetail = () => {
       },
       {
         header: 'Estado',
-        accessor: 'esActivo',
+        accessor: 'es_activo',
         render: (row) => (
-          <Badge variant={row.esActivo ? 'success' : 'danger'}>
-            {row.esActivo ? 'Activo' : 'Inactivo'}
+          <Badge variant={row.es_activo ? 'success' : 'danger'}>
+            {row.es_activo ? 'Activo' : 'Inactivo'}
           </Badge>
         ),
       },

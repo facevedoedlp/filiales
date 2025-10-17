@@ -29,10 +29,10 @@ const IntegranteDetail = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">{integrante.nombre}</h1>
-            <p className="text-sm text-slate-500">DNI {integrante.dni}</p>
+            <p className="text-sm text-slate-500">DNI {integrante.dni || '—'}</p>
           </div>
-          <Badge variant={integrante.esActivo ? 'success' : 'danger'}>
-            {integrante.esActivo ? 'Activo' : 'Inactivo'}
+          <Badge variant={integrante.es_activo ? 'success' : 'danger'}>
+            {integrante.es_activo ? 'Activo' : 'Inactivo'}
           </Badge>
         </div>
 
@@ -41,7 +41,7 @@ const IntegranteDetail = () => {
             <UserCircle className="h-10 w-10 text-red-600" />
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">Cargo</p>
-              <p className="text-sm font-semibold text-slate-800">{integrante.cargo}</p>
+              <p className="text-sm font-semibold text-slate-800">{integrante.cargo || '—'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -49,7 +49,7 @@ const IntegranteDetail = () => {
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">Referente</p>
               <p className="text-sm font-semibold text-slate-800">
-                {integrante.esReferente ? 'Sí' : 'No'}
+                {integrante.es_referente ? 'Sí' : 'No'}
               </p>
             </div>
           </div>
@@ -58,7 +58,7 @@ const IntegranteDetail = () => {
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">Contacto</p>
               <p className="text-sm font-semibold text-slate-800">
-                {integrante.telefono || integrante.correo || 'Sin datos'}
+                {integrante.telefono || integrante.correo || integrante.email || 'Sin datos'}
               </p>
             </div>
           </div>
@@ -67,11 +67,10 @@ const IntegranteDetail = () => {
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">Alta</p>
               <p className="text-sm font-semibold text-slate-800">
-                {integrante.creadoEn
+                {integrante.fecha_ingreso
                   ? new Intl.DateTimeFormat('es-AR', {
                       dateStyle: 'medium',
-                      timeStyle: 'short',
-                    }).format(new Date(integrante.creadoEn))
+                    }).format(new Date(integrante.fecha_ingreso))
                   : '—'}
               </p>
             </div>
@@ -79,18 +78,17 @@ const IntegranteDetail = () => {
         </div>
       </div>
 
-      {integrante.historial?.length ? (
+      {integrante.historial_inactividad?.length ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-900">Historial</h2>
           <ul className="mt-4 space-y-3 text-sm text-slate-600">
-            {integrante.historial.map((evento) => (
+            {integrante.historial_inactividad.map((evento) => (
               <li key={evento.id} className="rounded-lg border border-slate-100 p-3">
-                <p className="font-medium text-slate-800">{evento.descripcion}</p>
+                <p className="font-medium text-slate-800">{evento.motivo || 'Cambio de estado'}</p>
                 <p className="text-xs text-slate-500">
                   {new Intl.DateTimeFormat('es-AR', {
                     dateStyle: 'medium',
-                    timeStyle: 'short',
-                  }).format(new Date(evento.fecha))}
+                  }).format(new Date(evento.fecha_inicio))}
                 </p>
               </li>
             ))}

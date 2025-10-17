@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
@@ -19,24 +19,31 @@ import ConfirmDialog from '../../components/common/ConfirmDialog.jsx';
 
 const IntegranteList = () => {
   const { user } = useAuthStore();
-  const [filialId, setFilialId] = useState(user?.filialId || null);
+  const isGlobalAdmin = user?.rol === 'ADMIN_GLOBAL';
+  const [filialId, setFilialId] = useState(isGlobalAdmin ? null : user?.filial_id ?? null);
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ esActivo: true, cargo: null, busqueda: '' });
+  const [filters, setFilters] = useState({ es_activo: null, cargo: null, busqueda: '' });
   const [confirmToggle, setConfirmToggle] = useState(null);
 
   const { data: filialesData } = useFiliales({ page: 1, limit: 200, esActiva: true });
-  const queryFilters = { ...filters };
-  Object.keys(queryFilters).forEach((key) => {
-    if (queryFilters[key] === null || queryFilters[key] === '') {
-      delete queryFilters[key];
-    }
-  });
-  const integranteParams = { page, limit: 20, ...queryFilters };
-  if (filialId) {
-    integranteParams.filialId = filialId;
-  }
+  const resolvedFilialId = isGlobalAdmin ? filialId : user?.filial_id ?? null;
+  const integranteParams = {
+    page,
+    limit: 20,
+    filial_id: resolvedFilialId,
+    busqueda: filters.busqueda,
+    cargo: filters.cargo,
+    es_activo: filters.es_activo,
+  };
+
   const { data, isLoading } = useIntegrantes(integranteParams);
   const toggleIntegrante = useToggleIntegrante();
+
+  useEffect(() => {
+    if (!isGlobalAdmin) {
+      setFilialId(user?.filial_id ?? null);
+    }
+  }, [isGlobalAdmin, user?.filial_id]);
 
   const integrantes = data?.data?.items || [];
   const pagination = data?.data?.pagination;
@@ -87,10 +94,10 @@ const IntegranteList = () => {
     },
     {
       header: 'Estado',
-      accessor: 'esActivo',
+      accessor: 'es_activo',
       render: (row) => (
-        <Badge variant={row.esActivo ? 'success' : 'danger'}>
-          {row.esActivo ? 'Activo' : 'Inactivo'}
+        <Badge variant={row.es_activo ? 'success' : 'danger'}>
+          {row.es_activo ? 'Activo' : 'Inactivo'}
         </Badge>
       ),
     },
@@ -106,21 +113,23 @@ const IntegranteList = () => {
           </p>
         </div>
         <Link to="/integrantes/nuevo">
-          <Button disabled={!filialId}>Agregar integrante</Button>
+          <Button disabled={!resolvedFilialId}>Agregar integrante</Button>
         </Link>
       </div>
 
       <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-4">
-        <Select
-          label="Filial"
-          value={filialOptions.find((option) => option.value === filialId) || null}
-          onChange={(option) => {
-            setFilialId(option?.value ?? null);
-            setPage(1);
-          }}
-          options={filialOptions}
-          placeholder="Seleccioná una filial"
-        />
+        {isGlobalAdmin ? (
+          <Select
+            label="Filial"
+            value={filialOptions.find((option) => option.value === filialId) || null}
+            onChange={(option) => {
+              setFilialId(option?.value ?? null);
+              setPage(1);
+            }}
+            options={filialOptions}
+            placeholder="Todas las filiales"
+          />
+        ) : null}
 
         <SearchBar
           placeholder="Buscar por nombre"
@@ -128,17 +137,26 @@ const IntegranteList = () => {
             setFilters((prev) => ({ ...prev, busqueda: value }));
             setPage(1);
           }}
-          className="md:col-span-2"
+          className={isGlobalAdmin ? 'md:col-span-2' : 'md:col-span-3'}
         />
 
         <Select
           label="Estado"
-          value={filters.esActivo ? { value: true, label: 'Activos' } : { value: false, label: 'Inactivos' }}
+          value=
+            [
+              { value: null, label: 'Todos' },
+              { value: true, label: 'Activos' },
+              { value: false, label: 'Inactivos' },
+            ].find((option) => option.value === filters.es_activo) || {
+              value: null,
+              label: 'Todos',
+            }
           onChange={(option) => {
-            setFilters((prev) => ({ ...prev, esActivo: option.value }));
+            setFilters((prev) => ({ ...prev, es_activo: option?.value ?? null }));
             setPage(1);
           }}
           options={[
+            { value: null, label: 'Todos' },
             { value: true, label: 'Activos' },
             { value: false, label: 'Inactivos' },
           ]}
@@ -156,13 +174,7 @@ const IntegranteList = () => {
         />
       </div>
 
-      {!filialId ? (
-        <EmptyState
-          icon={Users}
-          title="Seleccioná una filial"
-          description="Para ver el listado de integrantes primero elegí una filial."
-        />
-      ) : isLoading ? (
+      {isLoading ? (
         <Loading message="Cargando integrantes" />
       ) : integrantes.length === 0 ? (
         <EmptyState
@@ -189,13 +201,13 @@ const IntegranteList = () => {
                 onClick={() =>
                   setConfirmToggle({
                     id: row.id,
-                    activo: !row.esActivo,
+                    activo: !row.es_activo,
                     nombre: row.nombre,
-                    filialId,
+                    filial_id: row.filial_id,
                   })
                 }
               >
-                {row.esActivo ? 'Desactivar' : 'Reactivar'}
+                {row.es_activo ? 'Desactivar' : 'Reactivar'}
               </button>
             </div>
           )}
@@ -205,7 +217,7 @@ const IntegranteList = () => {
       {pagination ? (
         <Pagination
           page={pagination.page}
-          totalPages={pagination.totalPages}
+          totalPages={pagination.total_pages}
           total={pagination.total}
           onPageChange={setPage}
         />

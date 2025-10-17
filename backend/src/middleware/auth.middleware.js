@@ -2,6 +2,24 @@
 import jwt from 'jsonwebtoken';
 import { errors } from './errorHandler.js';
 
+const normalizeUserPayload = (payload) => {
+  if (!payload) {
+    return null;
+  }
+
+  const userId = payload.user_id ?? payload.userId ?? payload.id ?? payload.sub ?? null;
+  const filialId = payload.filial_id ?? payload.filialId ?? null;
+
+  return {
+    ...payload,
+    user_id: userId,
+    userId,
+    id: userId,
+    filial_id: filialId,
+    filialId,
+  };
+};
+
 // Verificar token JWT
 export const authenticateToken = (req, res, next) => {
   try {
@@ -20,7 +38,7 @@ export const authenticateToken = (req, res, next) => {
         throw errors.unauthorized('Token inválido');
       }
 
-      req.user = user;
+      req.user = normalizeUserPayload(user);
       next();
     });
   } catch (error) {

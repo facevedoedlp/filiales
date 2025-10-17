@@ -13,6 +13,7 @@ import Button from '../../components/common/Button.jsx';
 import Loading from '../../components/common/Loading.jsx';
 import Select from '../../components/common/Select.jsx';
 import { useFiliales } from '../../hooks/useFiliales.js';
+import { useAuthStore } from '../../store/authStore.js';
 
 const integranteSchema = z.object({
   nombre: z.string().min(3, 'El nombre es obligatorio'),
@@ -20,9 +21,9 @@ const integranteSchema = z.object({
   correo: z.string().email('Correo inválido').optional().or(z.literal('')),
   telefono: z.string().optional().or(z.literal('')),
   cargo: z.string().min(2, 'Ingresá un cargo'),
-  esReferente: z.boolean().optional(),
-  numeroSocio: z.string().optional().or(z.literal('')),
-  filialId: z.union([z.string(), z.number()]),
+  es_referente: z.boolean().optional(),
+  numero_socio: z.string().optional().or(z.literal('')),
+  filial_id: z.union([z.string(), z.number()]),
 });
 
 const IntegranteForm = () => {
@@ -33,6 +34,8 @@ const IntegranteForm = () => {
   const createIntegrante = useCreateIntegrante();
   const updateIntegrante = useUpdateIntegrante();
   const { data: filialesData } = useFiliales({ page: 1, limit: 200, esActiva: true });
+  const { user } = useAuthStore();
+  const isGlobalAdmin = user?.rol === 'ADMIN_GLOBAL';
 
   const filialesOptions = filialesData?.data?.items?.map((filial) => ({
     value: filial.id,
@@ -53,17 +56,22 @@ const IntegranteForm = () => {
       correo: '',
       telefono: '',
       cargo: '',
-      esReferente: false,
-      numeroSocio: '',
-      filialId: filialesOptions[0]?.value || '',
+      es_referente: false,
+      numero_socio: '',
+      filial_id: isGlobalAdmin ? filialesOptions[0]?.value || '' : user?.filial_id || '',
     },
   });
 
   useEffect(() => {
-    if (!isEditing && filialesOptions[0]) {
-      setValue('filialId', filialesOptions[0].value);
+    if (!isEditing) {
+      if (isGlobalAdmin && filialesOptions[0]) {
+        setValue('filial_id', filialesOptions[0].value);
+      }
+      if (!isGlobalAdmin) {
+        setValue('filial_id', user?.filial_id || '');
+      }
     }
-  }, [filialesOptions, isEditing, setValue]);
+  }, [filialesOptions, isEditing, isGlobalAdmin, setValue, user?.filial_id]);
 
   useEffect(() => {
     if (data?.data) {
@@ -74,9 +82,9 @@ const IntegranteForm = () => {
         'correo',
         'telefono',
         'cargo',
-        'esReferente',
-        'numeroSocio',
-        'filialId',
+        'es_referente',
+        'numero_socio',
+        'filial_id',
       ];
       fields.forEach((field) => {
         if (field in payload) {
@@ -87,10 +95,15 @@ const IntegranteForm = () => {
   }, [data, setValue]);
 
   const onSubmit = async (values) => {
+    const payload = {
+      ...values,
+      filial_id: isGlobalAdmin ? values.filial_id : user?.filial_id,
+    };
+
     if (isEditing) {
-      await updateIntegrante.mutateAsync({ id, data: values });
+      await updateIntegrante.mutateAsync({ id, data: payload });
     } else {
-      await createIntegrante.mutateAsync(values);
+      await createIntegrante.mutateAsync(payload);
     }
     navigate('/integrantes');
   };
@@ -115,20 +128,31 @@ const IntegranteForm = () => {
           <Input label="Correo" {...register('correo')} error={errors.correo?.message} />
           <Input label="Teléfono" {...register('telefono')} error={errors.telefono?.message} />
           <Input label="Cargo" {...register('cargo')} error={errors.cargo?.message} />
-          <Input label="Número de socio" {...register('numeroSocio')} error={errors.numeroSocio?.message} />
+          <Input label="Número de socio" {...register('numero_socio')} error={errors.numero_socio?.message} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Select
-            label="Filial"
-            options={filialesOptions}
-            value={filialesOptions.find((option) => String(option.value) === String(watch('filialId')))}
-            onChange={(option) => setValue('filialId', option?.value ?? '')}
-            error={errors.filialId?.message}
-          />
+          {isGlobalAdmin ? (
+            <Select
+              label="Filial"
+              options={filialesOptions}
+              value={filialesOptions.find((option) => String(option.value) === String(watch('filial_id')))}
+              onChange={(option) => setValue('filial_id', option?.value ?? '')}
+              error={errors.filial_id?.message}
+            />
+          ) : (
+            <Input
+              label="Filial"
+              value={
+                filialesOptions.find((option) => String(option.value) === String(user?.filial_id))?.label ||
+                'Mi filial'
+              }
+              readOnly
+            />
+          )}
 
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input type="checkbox" {...register('esReferente')} className="h-4 w-4 rounded border-slate-300" />
+            <input type="checkbox" {...register('es_referente')} className="h-4 w-4 rounded border-slate-300" />
             ¿Es referente?
           </label>
         </div>

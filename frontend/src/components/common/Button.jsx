@@ -1,19 +1,30 @@
-const baseStyles =
-  'inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300';
+const Button = ({ 
+  children, 
+  variant = 'primary', 
+  size = 'md',
+  className = '', 
+  ...props 
+}) => {
+  const baseClasses = 'font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+  
+  const variants = {
+    primary: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+    outline: 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-500',
+    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500',
+  };
 
-const variants = {
-  secondary:
-    'inline-flex items-center justify-center rounded-md bg-secondary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-secondary/90 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300',
-  ghost:
-    'inline-flex items-center justify-center rounded-md border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-50',
-};
+  const sizes = {
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-4 py-2 text-base',
+    lg: 'px-6 py-3 text-lg',
+  };
 
-const Button = ({ children, variant = 'primary', className = '', as: Component = 'button', ...props }) => {
-  const styles = variant === 'primary' ? baseStyles : variants[variant] ?? baseStyles;
+  const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
+
   return (
-    <Component className={`${styles} ${className}`.trim()} {...props}>
+    <button className={classes} {...props}>
       {children}
-    </Component>
+    </button>
   );
 };
 

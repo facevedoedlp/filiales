@@ -1,27 +1,38 @@
-import { useNavigate } from 'react-router-dom';
-import Button from '../common/Button.jsx';
-import useAuth from '../../hooks/useAuth.js';
+import { useAuthStore } from '../../store/authStore';
+import useAuth from '../../hooks/useAuth';
+import Button from '../common/Button';
 
 const Navbar = () => {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuthStore();
+  const { logout } = useAuth();
 
   return (
-    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
-      <div>
-        <h1 className="text-xl font-semibold text-primary">Filiales Estudiantes</h1>
-        <p className="text-sm text-slate-500">Gestión integral de filiales y acciones</p>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="text-right">
-          <p className="text-sm font-semibold text-slate-700">{user?.nombre}</p>
-          <p className="text-xs text-slate-500">{user?.rol}</p>
+    <nav className="bg-red-700 text-white shadow-lg">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-xl font-bold">Filiales EDLP</h1>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <span className="text-sm">
+              👤 {user?.nombre} 
+              <span className="ml-2 text-xs bg-red-900 px-2 py-1 rounded">
+                {user?.rol}
+              </span>
+            </span>
+            <Button 
+              onClick={logout}
+              variant="outline"
+              size="sm"
+              className="border-white text-white hover:bg-red-800"
+            >
+              Cerrar sesión
+            </Button>
+          </div>
         </div>
-        <Button variant="ghost" onClick={() => { logout(); navigate('/login'); }}>
-          Cerrar sesión
-        </Button>
       </div>
-    </header>
+    </nav>
   );
 };
 

@@ -1,44 +1,70 @@
-import prisma from '../config/database.js';
-import { verifyToken } from '../utils/jwt.utils.js';
-import { errorResponse } from '../utils/response.utils.js';
+// backend/src/middleware/auth.middleware.js
+import jwt from 'jsonwebtoken';
+import { errors } from './errorHandler.js';
 
-export const authenticate = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return errorResponse(res, 'Token no provisto', 401);
-  }
-
+// Verificar token JWT
+export const authenticateToken = (req, res, next) => {
   try {
-    const token = authHeader.split(' ')[1];
-    const payload = verifyToken(token);
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
-    const user = await prisma.usuario.findUnique({
-      where: { id: payload.userId },
-      select: {
-        id: true,
-        nombre: true,
-        correo: true,
-        rol: true,
-        esActivo: true,
-        filialId: true,
-      },
-    });
-
-    if (!user || !user.esActivo) {
-      return errorResponse(res, 'Usuario no autorizado', 401);
+    if (!token) {
+      throw errors.unauthorized('Token no proporcionado');
     }
 
-    req.user = user;
-    next();
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        if (err.name === 'TokenExpiredError') {
+          throw errors.unauthorized('Token expirado');
+        }
+        throw errors.unauthorized('Token inválido');
+      }
+
+      req.user = user;
+      next();
+    });
   } catch (error) {
-    return errorResponse(res, 'Token inválido', 401);
+    next(error);
   }
 };
 
-export const authorizeRoles = (...roles) => (req, res, next) => {
-  if (!req.user || !roles.includes(req.user.rol)) {
-    return errorResponse(res, 'No tienes permisos suficientes', 403);
+// Verificar roles específicos
+export const requireRole = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return next(errors.unauthorized('No autenticado'));
+    }
+
+    if (!roles.includes(req.user.rol)) {
+      return next(errors.forbidden('No tienes permisos para esta acción'));
+    }
+
+    next();
+  };
+};
+
+// Verificar que el usuario pertenece a la filial
+export const requireOwnFilial = (req, res, next) => {
+  const filialId = parseInt(req.params.filialId || req.body.filialId || req.query.filialId);
+
+  if (!filialId) {
+    return next(errors.badRequest('ID de filial requerido'));
+  }
+
+  // Admin y Coordinador pueden acceder a cualquier filial
+  if (req.user.rol === 'ADMIN' || req.user.rol === 'COORDINADOR') {
+    return next();
+  }
+
+  // Usuario de filial solo puede acceder a su propia filial
+  if (req.user.filialId !== filialId) {
+    return next(errors.forbidden('No tienes acceso a esta filial'));
   }
 
   next();
+};
+
+// Middleware combinado: autenticación + rol
+export const authenticateAndRequireRole = (...roles) => {
+  return [authenticateToken, requireRole(...roles)];
 };

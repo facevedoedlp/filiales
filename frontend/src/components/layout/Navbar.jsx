@@ -1,6 +1,7 @@
 import { useAuthStore } from '../../store/authStore';
 import useAuth from '../../hooks/useAuth';
 import Button from '../common/Button';
+import NotificationBell from './NotificationBell.jsx';
 
 const Navbar = () => {
   const { user } = useAuthStore();
@@ -15,8 +16,9 @@ const Navbar = () => {
           </div>
           
           <div className="flex items-center space-x-4">
+            <NotificationBell />
             <span className="text-sm">
-              👤 {user?.nombre} 
+              👤 {user?.nombre}
               <span className="ml-2 text-xs bg-red-900 px-2 py-1 rounded">
                 {user?.rol}
               </span>

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CalendarClock, FileText, MapPin, Phone, Users } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useFilial, useFilialEstadisticas } from '../../hooks/useFiliales.js';
+import { useIntegrantes } from '../../hooks/useIntegrantes.js';
 import Button from '../../components/common/Button.jsx';
 import Loading from '../../components/common/Loading.jsx';
 import Badge from '../../components/common/Badge.jsx';
@@ -18,10 +19,14 @@ const FilialDetail = () => {
   const [activeTab, setActiveTab] = useState('info');
   const { data, isLoading } = useFilial(id);
   const { data: estadisticasData } = useFilialEstadisticas(id);
+  const {
+    data: integrantesData,
+    isLoading: loadingIntegrantes,
+  } = useIntegrantes({ filialId: id, page: 1, limit: 20, esActivo: true });
 
   const filial = data?.data;
 
-  const integrantes = filial?.integrantes?.items ?? [];
+  const integrantes = integrantesData?.data?.items ?? filial?.integrantes ?? [];
   const acciones = filial?.acciones?.items ?? [];
 
   const integrantColumns = useMemo(
@@ -251,7 +256,7 @@ const FilialDetail = () => {
           <Table
             columns={integrantColumns}
             data={integrantes}
-            loading={false}
+            loading={loadingIntegrantes}
             emptyMessage="No hay integrantes activos registrados"
           />
         ) : null}

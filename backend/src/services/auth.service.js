@@ -21,7 +21,7 @@ export const login = async ({ correo, password }) => {
     throw error;
   }
 
-  const token = signToken({ userId: user.id, rol: user.rol, filialId: user.filialId });
+  const token = signToken({ user_id: user.id, rol: user.rol, filial_id: user.filialId });
 
   return {
     token,
@@ -30,7 +30,7 @@ export const login = async ({ correo, password }) => {
       nombre: user.nombre,
       correo: user.correo,
       rol: user.rol,
-      filialId: user.filialId,
+      filial_id: user.filialId,
       filial: user.filial,
     },
   };
@@ -40,9 +40,9 @@ export const refresh = async ({ token }) => {
   try {
     const decoded = verifyToken(token);
     const newToken = signToken({
-      userId: decoded.userId,
+      user_id: decoded.user_id ?? decoded.userId,
       rol: decoded.rol,
-      filialId: decoded.filialId,
+      filial_id: decoded.filial_id ?? decoded.filialId,
     });
 
     return { token: newToken };
@@ -74,5 +74,10 @@ export const me = async (userId) => {
     throw error;
   }
 
-  return user;
+  const { filialId, ...rest } = user;
+
+  return {
+    ...rest,
+    filial_id: filialId,
+  };
 };

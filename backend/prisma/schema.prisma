@@ -31,6 +31,7 @@ model Usuario {
   foroPosts       ForoTema[]
   foroRespuestas  ForoRespuesta[]
   notificaciones  Notificacion[]
+  auditorias      AuditoriaRegistro[]
 
   @@map("usuarios")
 }
@@ -39,6 +40,7 @@ enum Rol {
   ADMIN
   COORDINADOR
   FILIAL
+  ADMIN_GLOBAL
 }
 
 model Coordinador {
@@ -129,6 +131,8 @@ model Integrante {
   historialInactividad HistorialInactividad[]
 
   @@map("integrantes")
+  @@index([filialId])
+  @@index([filialId, esActivo])
 }
 
 model HistorialInactividad {
@@ -393,10 +397,28 @@ model Notificacion {
   leida       Boolean   @default(false)
   url         String?
   createdAt   DateTime  @default(now())
-  
+
   usuario     Usuario   @relation(fields: [usuarioId], references: [id])
-  
+
   @@map("notificaciones")
+}
+
+model AuditoriaRegistro {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int?
+  rol        Rol?
+  operacion  String
+  tabla      String
+  registroId Int?
+  filialId   Int?
+  datos      Json?
+  createdAt  DateTime @default(now())
+
+  usuario    Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@map("auditoria_registros")
+  @@index([tabla, registroId])
+  @@index([filialId])
 }
 
 

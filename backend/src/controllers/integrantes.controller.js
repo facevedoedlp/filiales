@@ -1,13 +1,21 @@
 import prisma from '../config/database.js';
+import { toCamelCase, toSnakeCase } from '../utils/case.utils.js';
+import { registrarAuditoria } from '../services/auditoria.service.js';
 
 const parseBoolean = (value) => {
   if (typeof value === 'boolean') {
     return value;
   }
   if (typeof value === 'string') {
-    return value.toLowerCase() === 'true';
+    const normalized = value.toLowerCase();
+    if (normalized === 'true') {
+      return true;
+    }
+    if (normalized === 'false') {
+      return false;
+    }
   }
-  return undefined;
+  return null;
 };
 
 const formatIntegrante = (integrante) => {
@@ -21,9 +29,12 @@ const formatIntegrante = (integrante) => {
   };
 };
 
+const hasFilialAccess = (req, filialId) => req.scope?.isGlobalAdmin || filialId === req.scope?.filialId;
+
 export const getIntegrantes = async (req, res) => {
   try {
-    const { page = 1, limit = 20, filialId, esActivo, busqueda } = req.query;
+    const query = toCamelCase(req.query ?? {});
+    const { page = 1, limit = 20, filialId, esActivo, busqueda } = query;
 
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
     const take = Math.max(parseInt(limit, 10) || 20, 1);
@@ -31,29 +42,15 @@ export const getIntegrantes = async (req, res) => {
 
     const whereClause = {};
 
-    if (filialId) {
-      const filialIdInt = parseInt(filialId, 10);
-      if (Number.isNaN(filialIdInt)) {
-        return res.status(400).json({
-          success: false,
-          message: 'filialId debe ser un número válido',
-        });
-      }
-
-      if (req.user?.rol === 'FILIAL' && req.user.filialId !== filialIdInt) {
-        return res.status(403).json({
-          success: false,
-          message: 'No tienes acceso a los integrantes de esta filial',
-        });
-      }
-
-      whereClause.filialId = filialIdInt;
-    } else if (req.user?.rol === 'FILIAL' && req.user.filialId) {
-      whereClause.filialId = req.user.filialId;
+    const resolvedFilialId = req.scope?.resolveFilialId(filialId);
+    if (resolvedFilialId !== null && resolvedFilialId !== undefined) {
+      whereClause.filialId = resolvedFilialId;
+    } else if (!req.scope?.isGlobalAdmin && req.scope?.filialId) {
+      whereClause.filialId = req.scope.filialId;
     }
 
     const esActivoFilter = parseBoolean(esActivo);
-    if (typeof esActivoFilter !== 'undefined') {
+    if (esActivoFilter !== null) {
       whereClause.esActivo = esActivoFilter;
     }
 
@@ -94,7 +91,7 @@ export const getIntegrantes = async (req, res) => {
 
     res.json({
       success: true,
-      data: {
+      data: toSnakeCase({
         items: integrantes.map(formatIntegrante),
         pagination: {
           page: pageNumber,
@@ -102,7 +99,7 @@ export const getIntegrantes = async (req, res) => {
           total,
           totalPages,
         },
-      },
+      }),
     });
   } catch (error) {
     console.error('Error obteniendo integrantes:', error);
@@ -154,7 +151,7 @@ export const getIntegranteById = async (req, res) => {
       });
     }
 
-    if (req.user?.rol === 'FILIAL' && req.user.filialId !== integrante.filialId) {
+    if (!hasFilialAccess(req, integrante.filialId)) {
       return res.status(403).json({
         success: false,
         message: 'No tienes acceso a este integrante',
@@ -163,7 +160,7 @@ export const getIntegranteById = async (req, res) => {
 
     res.json({
       success: true,
-      data: formatIntegrante(integrante),
+      data: toSnakeCase(formatIntegrante(integrante)),
     });
   } catch (error) {
     console.error('Error obteniendo integrante:', error);
@@ -177,12 +174,15 @@ export const getIntegranteById = async (req, res) => {
 
 export const createIntegrante = async (req, res) => {
   try {
-    const { filialId, nombre, cargo, correo, telefono, esActivo, ...rest } = req.body;
+    const body = toCamelCase(req.body ?? {});
+    const { filialId, nombre, cargo, correo, telefono, esActivo, ...rest } = body;
 
-    if (!filialId) {
+    const resolvedFilialId = req.scope?.resolveFilialId(filialId);
+
+    if (resolvedFilialId === null) {
       return res.status(400).json({
         success: false,
-        message: 'filialId es requerido para crear un integrante',
+        message: 'filial_id es requerido para crear un integrante',
       });
     }
 
@@ -192,31 +192,22 @@ export const createIntegrante = async (req, res) => {
         message: 'El nombre es requerido',
       });
     }
-
-    const filialIdInt = parseInt(filialId, 10);
-
-    if (Number.isNaN(filialIdInt)) {
-      return res.status(400).json({
-        success: false,
-        message: 'filialId debe ser un número válido',
-      });
-    }
-
-    if (req.user?.rol === 'FILIAL' && req.user.filialId !== filialIdInt) {
+    if (!hasFilialAccess(req, resolvedFilialId)) {
       return res.status(403).json({
         success: false,
         message: 'No puedes agregar integrantes a esta filial',
       });
     }
 
+    const esActivoValue = parseBoolean(esActivo);
     const integrante = await prisma.integrante.create({
       data: {
-        filialId: filialIdInt,
+        filialId: resolvedFilialId,
         nombre: nombre.trim(),
         cargo: cargo || null,
         correo: correo || null,
         telefono: telefono || null,
-        esActivo: typeof esActivo !== 'undefined' ? Boolean(esActivo) : true,
+        esActivo: esActivoValue === null ? true : esActivoValue,
         ...rest,
       },
       include: {
@@ -235,9 +226,18 @@ export const createIntegrante = async (req, res) => {
       },
     });
 
+    registrarAuditoria({
+      req,
+      operacion: 'CREATE',
+      tabla: 'integrantes',
+      registroId: integrante.id,
+      filialId: integrante.filialId,
+      datos: integrante,
+    });
+
     res.status(201).json({
       success: true,
-      data: formatIntegrante(integrante),
+      data: toSnakeCase(formatIntegrante(integrante)),
     });
   } catch (error) {
     console.error('Error creando integrante:', error);
@@ -270,14 +270,15 @@ export const updateIntegrante = async (req, res) => {
       });
     }
 
-    if (req.user?.rol === 'FILIAL' && req.user.filialId !== existente.filialId) {
+    if (!hasFilialAccess(req, existente.filialId)) {
       return res.status(403).json({
         success: false,
         message: 'No puedes editar este integrante',
       });
     }
 
-    const { filialId, nombre, cargo, correo, telefono, esActivo, ...rest } = req.body;
+    const body = toCamelCase(req.body ?? {});
+    const { filialId, nombre, cargo, correo, telefono, esActivo, ...rest } = body;
     const data = { ...rest };
 
     if (typeof nombre !== 'undefined') {
@@ -291,23 +292,23 @@ export const updateIntegrante = async (req, res) => {
     }
 
     if (typeof filialId !== 'undefined') {
-      const filialIdInt = filialId ? parseInt(filialId, 10) : null;
-      if (filialIdInt && Number.isNaN(filialIdInt)) {
+      const resolvedFilialId = req.scope?.resolveFilialId(filialId);
+      if (resolvedFilialId === null) {
         return res.status(400).json({
           success: false,
-          message: 'filialId debe ser un número válido',
+          message: 'filial_id debe ser un número válido',
         });
       }
 
-      if (filialIdInt && req.user?.rol === 'FILIAL' && req.user.filialId !== filialIdInt) {
+      if (!req.scope?.isGlobalAdmin && resolvedFilialId !== existente.filialId) {
         return res.status(403).json({
           success: false,
           message: 'No puedes mover integrantes a otra filial',
         });
       }
 
-      if (filialIdInt) {
-        data.filialId = filialIdInt;
+      if (req.scope?.isGlobalAdmin) {
+        data.filialId = resolvedFilialId;
       }
     }
 
@@ -324,7 +325,14 @@ export const updateIntegrante = async (req, res) => {
     }
 
     if (typeof esActivo !== 'undefined') {
-      data.esActivo = Boolean(esActivo);
+      const esActivoValue = parseBoolean(esActivo);
+      if (esActivoValue === null) {
+        return res.status(400).json({
+          success: false,
+          message: 'es_activo debe ser un valor booleano',
+        });
+      }
+      data.esActivo = esActivoValue;
     }
 
     const integrante = await prisma.integrante.update({
@@ -346,9 +354,18 @@ export const updateIntegrante = async (req, res) => {
       },
     });
 
+    registrarAuditoria({
+      req,
+      operacion: 'UPDATE',
+      tabla: 'integrantes',
+      registroId: integrante.id,
+      filialId: integrante.filialId,
+      datos: integrante,
+    });
+
     res.json({
       success: true,
-      data: formatIntegrante(integrante),
+      data: toSnakeCase(formatIntegrante(integrante)),
     });
   } catch (error) {
     console.error('Error actualizando integrante:', error);
@@ -381,7 +398,7 @@ export const deleteIntegrante = async (req, res) => {
       });
     }
 
-    if (req.user?.rol === 'FILIAL' && req.user.filialId !== existente.filialId) {
+    if (!hasFilialAccess(req, existente.filialId)) {
       return res.status(403).json({
         success: false,
         message: 'No puedes eliminar este integrante',
@@ -389,6 +406,14 @@ export const deleteIntegrante = async (req, res) => {
     }
 
     await prisma.integrante.delete({ where: { id: integranteId } });
+
+    registrarAuditoria({
+      req,
+      operacion: 'DELETE',
+      tabla: 'integrantes',
+      registroId: integranteId,
+      filialId: existente.filialId,
+    });
 
     res.json({
       success: true,
@@ -425,7 +450,7 @@ export const deactivateIntegrante = async (req, res) => {
       });
     }
 
-    if (req.user?.rol === 'FILIAL' && req.user.filialId !== integrante.filialId) {
+    if (!hasFilialAccess(req, integrante.filialId)) {
       return res.status(403).json({
         success: false,
         message: 'No tienes acceso a este integrante',
@@ -445,9 +470,17 @@ export const deactivateIntegrante = async (req, res) => {
       },
     });
 
+    registrarAuditoria({
+      req,
+      operacion: 'DEACTIVATE',
+      tabla: 'integrantes',
+      registroId: integranteId,
+      filialId: integrante.filialId,
+    });
+
     res.json({
       success: true,
-      data: updated,
+      data: toSnakeCase(updated),
       message: 'Integrante desactivado exitosamente',
     });
   } catch (error) {
@@ -481,7 +514,7 @@ export const activateIntegrante = async (req, res) => {
       });
     }
 
-    if (req.user?.rol === 'FILIAL' && req.user.filialId !== integrante.filialId) {
+    if (!hasFilialAccess(req, integrante.filialId)) {
       return res.status(403).json({
         success: false,
         message: 'No tienes acceso a este integrante',
@@ -501,9 +534,17 @@ export const activateIntegrante = async (req, res) => {
       data: { esActivo: true },
     });
 
+    registrarAuditoria({
+      req,
+      operacion: 'ACTIVATE',
+      tabla: 'integrantes',
+      registroId: integranteId,
+      filialId: integrante.filialId,
+    });
+
     res.json({
       success: true,
-      data: updated,
+      data: toSnakeCase(updated),
       message: 'Integrante activado exitosamente',
     });
   } catch (error) {

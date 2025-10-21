@@ -3,14 +3,13 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.mixins import FiltroPorFilialMixin
 from core.permissions import EsAdministrador
 
 from .models import Filial
 from .serializers import FilialSerializer
 
 
-class FilialViewSet(FiltroPorFilialMixin, viewsets.ModelViewSet):
+class FilialViewSet(viewsets.ModelViewSet):
     """CRUD completo para filiales."""
 
     queryset = Filial.objects.select_related("presidente").all()

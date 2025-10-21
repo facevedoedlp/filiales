@@ -2,9 +2,10 @@
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 
 from core.mixins import FiltroPorFilialMixin
-from core.permissions import EsAdministrador
+from core.permissions import EsAdministrador, EsPresidenteOAdmin
 
 from .models import SolicitudEntrada
 from .serializers import ResolverSolicitudSerializer, SolicitudEntradaSerializer
@@ -21,7 +22,7 @@ class SolicitudEntradaViewSet(FiltroPorFilialMixin, viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == "create":
-            return [permissions.IsAuthenticated()]
+            return [EsPresidenteOAdmin()]
         if self.action in {"aprobar", "rechazar"}:
             return [EsAdministrador()]
         if self.action in {"update", "partial_update", "destroy"}:
@@ -29,7 +30,13 @@ class SolicitudEntradaViewSet(FiltroPorFilialMixin, viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def perform_create(self, serializer):
-        serializer.save(solicitante=self.request.user)
+        usuario = self.request.user
+        if not (getattr(usuario, "es_presidente", False) or getattr(usuario, "es_admin", False)):
+            raise PermissionDenied("Solo los presidentes pueden generar solicitudes")
+        filial = serializer.validated_data.get("filial")
+        if getattr(usuario, "es_presidente", False):
+            filial = usuario.filial
+        serializer.save(solicitante=usuario, filial=filial)
 
     @action(detail=True, methods=["patch"], serializer_class=ResolverSolicitudSerializer)
     def aprobar(self, request, *args, **kwargs):

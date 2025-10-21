@@ -13,14 +13,16 @@ class IntegranteAdmin(UserAdmin):
                 "fields": (
                     "nombre",
                     "apellido",
-                    "documento",
-                    "telefono",
-                    "filial",
-                    "rol",
-                    "estado_membresia",
-                    "fecha_ingreso",
-                )
-            },
+                "documento",
+                "telefono",
+                "avatar",
+                "filial",
+                "rol",
+                "estado_membresia",
+                "fecha_nacimiento",
+                "fecha_ingreso",
+            )
+        },
         ),
     )
     list_display = ("username", "nombre", "apellido", "rol", "estado_membresia", "filial")

@@ -1,7 +1,7 @@
 """Serializadores del foro."""
 from rest_framework import serializers
 
-from .models import Categoria, Hilo, Respuesta
+from .models import Categoria, Respuesta, Tema
 
 
 class CategoriaSerializer(serializers.ModelSerializer):
@@ -17,35 +17,54 @@ class RespuestaSerializer(serializers.ModelSerializer):
         model = Respuesta
         fields = [
             "id",
-            "hilo",
+            "tema",
             "autor",
             "autor_nombre",
             "contenido",
             "respuesta_padre",
-            "creado",
-            "actualizado",
+            "created_at",
+            "updated_at",
             "es_moderada",
             "motivo_moderacion",
         ]
-        read_only_fields = ("id", "autor_nombre", "creado", "actualizado", "es_moderada", "motivo_moderacion")
+        read_only_fields = (
+            "id",
+            "autor_nombre",
+            "created_at",
+            "updated_at",
+            "es_moderada",
+            "motivo_moderacion",
+        )
+        extra_kwargs = {"tema": {"required": False}}
 
 
-class HiloSerializer(serializers.ModelSerializer):
+class TemaSerializer(serializers.ModelSerializer):
     autor_nombre = serializers.CharField(source="autor.get_full_name", read_only=True)
+    filial_nombre = serializers.CharField(source="filial.nombre", read_only=True)
     respuestas = RespuestaSerializer(many=True, read_only=True)
 
     class Meta:
-        model = Hilo
+        model = Tema
         fields = [
             "id",
             "categoria",
             "autor",
             "autor_nombre",
+            "filial",
+            "filial_nombre",
             "titulo",
             "contenido",
-            "estado",
-            "creado",
-            "actualizado",
+            "fijado",
+            "cerrado",
+            "created_at",
+            "updated_at",
             "respuestas",
         ]
-        read_only_fields = ("id", "autor_nombre", "creado", "actualizado", "respuestas")
+        read_only_fields = (
+            "id",
+            "autor_nombre",
+            "filial_nombre",
+            "created_at",
+            "updated_at",
+            "respuestas",
+        )

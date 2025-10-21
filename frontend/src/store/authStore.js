@@ -1,3 +1,4 @@
+// src/store/authStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -6,13 +7,14 @@ export const useAuthStore = create(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      isLoading: false,
-
-      setUser: (user) => set({ user, isAuthenticated: Boolean(user) }),
-
-      setLoading: (isLoading) => set({ isLoading }),
-
+      
+      setUser: (user) => {
+        console.log('✅ setUser:', user);
+        set({ user, isAuthenticated: true });
+      },
+      
       logout: () => {
+        console.log('🚪 logout');
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         set({ user: null, isAuthenticated: false });
@@ -20,7 +22,6 @@ export const useAuthStore = create(
     }),
     {
       name: 'auth-storage',
-      partialize: ({ user, isAuthenticated }) => ({ user, isAuthenticated }),
-    },
-  ),
+    }
+  )
 );

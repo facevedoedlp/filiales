@@ -23,7 +23,12 @@ import { useAuthStore } from './store/authStore';
 import { ROLES } from './utils/constants';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore((state) => ({
+    isAuthenticated: state.isAuthenticated,
+    user: state.user,
+  }));
+
+  // console.log('[ProtectedRoute] isAuthenticated:', isAuthenticated, 'requiredRole:', requiredRole, 'userRole:', user?.rol);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -33,7 +38,28 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return children || <Outlet />;
+  return children ?? <Outlet />;
+};
+
+const LoginRoute = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  // console.log('[LoginRoute] isAuthenticated:', isAuthenticated);
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Login />;
+};
+
+const NotFoundRedirect = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const target = isAuthenticated ? '/dashboard' : '/login';
+
+  // console.log('[NotFoundRedirect] isAuthenticated:', isAuthenticated, 'redirectingTo:', target);
+
+  return <Navigate to={target} replace />;
 };
 
 const App = () => {
@@ -41,59 +67,56 @@ const App = () => {
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="filiales">
-            <Route index element={<FilialesList />} />
-            <Route path="mapa" element={<FilialesMap />} />
-            <Route path=":id" element={<FilialDetailPage />} />
+        <Route path="/login" element={<LoginRoute />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="filiales">
+              <Route index element={<FilialesList />} />
+              <Route path="mapa" element={<FilialesMap />} />
+              <Route path=":id" element={<FilialDetailPage />} />
+            </Route>
+            <Route path="integrantes">
+              <Route index element={<IntegrantesList />} />
+              <Route path=":id" element={<IntegranteDetailPage />} />
+            </Route>
+            <Route path="acciones">
+              <Route index element={<AccionesList />} />
+              <Route
+                path="nueva"
+                element={
+                  <ProtectedRoute requiredRole={ROLES.ADMIN}>
+                    <AccionNew />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path=":id" element={<AccionDetailPage />} />
+            </Route>
+            <Route path="entradas">
+              <Route index element={<EntradasList />} />
+              <Route path="nueva" element={<EntradaNew />} />
+              <Route
+                path="aprobar"
+                element={
+                  <ProtectedRoute requiredRole={ROLES.ADMIN}>
+                    <EntradasApproval />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+            <Route path="foro">
+              <Route index element={<ForoHome />} />
+              <Route path="categoria/:slug" element={<CategoriaPage />} />
+              <Route path="hilo/:id" element={<HiloPage />} />
+              <Route path="nuevo" element={<HiloNew />} />
+            </Route>
+            <Route path="perfil" element={<Perfil />} />
           </Route>
-          <Route path="integrantes">
-            <Route index element={<IntegrantesList />} />
-            <Route path=":id" element={<IntegranteDetailPage />} />
-          </Route>
-          <Route path="acciones">
-            <Route index element={<AccionesList />} />
-            <Route
-              path="nueva"
-              element={
-                <ProtectedRoute requiredRole={ROLES.ADMIN}>
-                  <AccionNew />
-                </ProtectedRoute>
-              }
-            />
-            <Route path=":id" element={<AccionDetailPage />} />
-          </Route>
-          <Route path="entradas">
-            <Route index element={<EntradasList />} />
-            <Route path="nueva" element={<EntradaNew />} />
-            <Route
-              path="aprobar"
-              element={
-                <ProtectedRoute requiredRole={ROLES.ADMIN}>
-                  <EntradasApproval />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
-          <Route path="foro">
-            <Route index element={<ForoHome />} />
-            <Route path="categoria/:slug" element={<CategoriaPage />} />
-            <Route path="hilo/:id" element={<HiloPage />} />
-            <Route path="nuevo" element={<HiloNew />} />
-          </Route>
-          <Route path="perfil" element={<Perfil />} />
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+        <Route path="*" element={<NotFoundRedirect />} />
       </Routes>
     </BrowserRouter>
   );

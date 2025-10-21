@@ -18,15 +18,28 @@ const parseBoolean = (value) => {
   return null;
 };
 
-const formatIntegrante = (integrante) => {
+const formatIntegrante = (integrante, totalActivos = null) => {
   if (!integrante) {
     return integrante;
   }
 
-  return {
+  const formatted = {
     ...integrante,
-    cargo: integrante.cargo?.nombre ?? integrante.cargo ?? null,
+    cargo: integrante.cargo?.nombre ?? null,
   };
+
+  if (integrante.filial) {
+    formatted.filial = {
+      ...integrante.filial,
+      totalIntegrantesActivos: totalActivos ?? integrante.filial.totalIntegrantesActivos ?? 0,
+    };
+  }
+
+  if (totalActivos !== null) {
+    formatted.totalIntegrantesActivos = totalActivos;
+  }
+
+  return formatted;
 };
 
 const hasFilialAccess = (req, filialId) => req.scope?.isGlobalAdmin || filialId === req.scope?.filialId;
@@ -87,12 +100,49 @@ export const getIntegrantes = async (req, res) => {
       prisma.integrante.count({ where: whereClause }),
     ]);
 
+    const filialIds = [...new Set(integrantes.map((integrante) => integrante.filialId).filter(Boolean))];
+
+    let totalActivosPorFilial = {};
+    if (filialIds.length > 0) {
+      const grupos = await prisma.integrante.groupBy({
+        by: ['filialId'],
+        where: {
+          filialId: { in: filialIds },
+          esActivo: true,
+        },
+        _count: {
+          _all: true,
+        },
+      });
+
+      totalActivosPorFilial = grupos.reduce((acc, item) => {
+        acc[item.filialId] = item._count._all;
+        return acc;
+      }, {});
+    }
+
+    const integrantesFormateados = integrantes.map((integrante) => {
+      const totalActivos = totalActivosPorFilial[integrante.filialId] ?? 0;
+      return formatIntegrante(
+        {
+          ...integrante,
+          filial: integrante.filial
+            ? {
+                ...integrante.filial,
+                totalIntegrantesActivos: totalActivos,
+              }
+            : null,
+        },
+        totalActivos,
+      );
+    });
+
     const totalPages = take > 0 ? Math.ceil(total / take) : 0;
 
     res.json({
       success: true,
       data: toSnakeCase({
-        items: integrantes.map(formatIntegrante),
+        items: integrantesFormateados,
         pagination: {
           page: pageNumber,
           limit: take,
@@ -158,9 +208,11 @@ export const getIntegranteById = async (req, res) => {
       });
     }
 
+    const totalActivos = await prisma.integrante.count({ where: { filialId: integrante.filialId, esActivo: true } });
+
     res.json({
       success: true,
-      data: toSnakeCase(formatIntegrante(integrante)),
+      data: toSnakeCase(formatIntegrante(integrante, totalActivos)),
     });
   } catch (error) {
     console.error('Error obteniendo integrante:', error);
@@ -175,7 +227,7 @@ export const getIntegranteById = async (req, res) => {
 export const createIntegrante = async (req, res) => {
   try {
     const body = toCamelCase(req.body ?? {});
-    const { filialId, nombre, cargo, correo, telefono, esActivo, ...rest } = body;
+    const { filialId, nombre, cargoId, cargo, correo, email, telefono, esActivo, ...rest } = body;
 
     const resolvedFilialId = req.scope?.resolveFilialId(filialId);
 
@@ -204,8 +256,8 @@ export const createIntegrante = async (req, res) => {
       data: {
         filialId: resolvedFilialId,
         nombre: nombre.trim(),
-        cargo: cargo || null,
-        correo: correo || null,
+        cargoId: parseInt(cargoId ?? cargo, 10) || null,
+        email: correo || email || null,
         telefono: telefono || null,
         esActivo: esActivoValue === null ? true : esActivoValue,
         ...rest,
@@ -278,7 +330,7 @@ export const updateIntegrante = async (req, res) => {
     }
 
     const body = toCamelCase(req.body ?? {});
-    const { filialId, nombre, cargo, correo, telefono, esActivo, ...rest } = body;
+    const { filialId, nombre, cargoId, cargo, correo, email, telefono, esActivo, ...rest } = body;
     const data = { ...rest };
 
     if (typeof nombre !== 'undefined') {
@@ -312,12 +364,13 @@ export const updateIntegrante = async (req, res) => {
       }
     }
 
-    if (typeof cargo !== 'undefined') {
-      data.cargo = cargo || null;
+    if (typeof cargoId !== 'undefined' || typeof cargo !== 'undefined') {
+      const cargoValue = parseInt(cargoId ?? cargo, 10);
+      data.cargoId = Number.isNaN(cargoValue) ? null : cargoValue;
     }
 
-    if (typeof correo !== 'undefined') {
-      data.correo = correo || null;
+    if (typeof correo !== 'undefined' || typeof email !== 'undefined') {
+      data.email = correo || email || null;
     }
 
     if (typeof telefono !== 'undefined') {

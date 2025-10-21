@@ -26,8 +26,8 @@ export const foroApi = {
     return response.data;
   },
 
-  destacarTema: async (id) => {
-    const response = await apiClient.put(`/foro/temas/${id}/destacar`);
+  destacarTema: async (id, destacar = true) => {
+    const response = await apiClient.put(`/foro/temas/${id}/destacar`, { destacar });
     return response.data;
   },
 

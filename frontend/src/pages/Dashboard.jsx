@@ -9,52 +9,31 @@ import Loading from '../components/common/Loading.jsx';
 import Badge from '../components/common/Badge.jsx';
 
 const Dashboard = () => {
-<<<<<<< HEAD
-  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({
-    page: 1,
-    limit: 200,
-    esActiva: true,
-  });
-  const { data: accionesData, isLoading: loadingAcciones } = useAcciones({
-    page: 1,
-    limit: 5,
-  });
-  const { data: pedidosData } = usePedidosEntradas({
-    page: 1,
-    limit: 5,
-    aprobacionSocios: 'PENDIENTE',
-  });
-=======
-  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({ page: 1, limit: 5, esActiva: true });
+  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({ page: 1, limit: 20, esActiva: true });
   const { data: accionesData, isLoading: loadingAcciones } = useAcciones({ page: 1, limit: 5 });
   const { data: pedidosData } = usePedidosEntradas({ page: 1, limit: 5, aprobacionSocios: 'PENDIENTE' });
->>>>>>> ad3da76 (cambios ok)
   const { data: fixtureData } = useFixture({ proximos: true, limit: 5 });
   const { data: temasData } = useTemas({ page: 1, limit: 5, orden: 'recientes' });
-  const { data: notificacionesData } = useNotificaciones({ leida: false });
+  const { data: notificacionesData } = useNotificaciones({ leida: false, limit: 5 });
 
-  const filialesTotal = filialesData?.data?.pagination?.total ?? 0;
-<<<<<<< HEAD
-  const integrantesTotal =
-    filialesData?.data?.items?.reduce((sum, filial) => {
-      return sum + (filial._count?.integrantes || filial.totalIntegrantesActivos || 0);
-    }, 0) ?? 0;
+  const filiales = filialesData?.data?.filiales ?? filialesData?.data?.items ?? [];
+  const acciones = accionesData?.data?.acciones ?? accionesData?.data?.items ?? [];
+  const temas = temasData?.data?.temas ?? temasData?.data?.items ?? [];
+  const fixture = fixtureData?.data ?? fixtureData?.data?.items ?? [];
+  const notificaciones = notificacionesData?.data?.items ?? notificacionesData?.data ?? [];
 
-=======
-  
-  // ✅ Calcular integrantes totales desde las filiales
-  const integrantesTotal = filialesData?.data?.items?.reduce((sum, filial) => {
-    return sum + (filial.totalIntegrantesActivos || filial._count?.integrantes || 0);
-  }, 0) ?? 0;
-  
->>>>>>> ad3da76 (cambios ok)
-  const accionesMes = (accionesData?.data?.items || []).filter((accion) => {
-    const fecha = new Date(accion.fechaRealizacion || accion.fecha);
+  const filialesTotal = filialesData?.data?.pagination?.total ?? filiales.length;
+  const integrantesTotal = filiales.reduce((sum, filial) => {
+    return sum + (filial.total_integrantes ?? filial.totalIntegrantes ?? filial.total_integrantes_activos ?? 0);
+  }, 0);
+
+  const accionesMes = acciones.filter((accion) => {
+    const fecha = new Date(accion.fecha_realizacion ?? accion.fechaRealizacion ?? accion.fecha);
     const hoy = new Date();
     return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
   }).length;
 
-  const pedidosPendientes = pedidosData?.data?.pagination?.total ?? 0;
+  const pedidosPendientes = pedidosData?.data?.pagination?.total ?? pedidosData?.data?.total ?? 0;
 
   const isLoading = loadingFiliales || loadingAcciones;
 
@@ -100,9 +79,9 @@ const Dashboard = () => {
 
       <section className="grid gap-6 md:grid-cols-2">
         <Card title="Últimas acciones" linkLabel="Ver todas" linkTo="/acciones">
-          {accionesData?.data?.items?.length ? (
+          {acciones.length ? (
             <ul className="space-y-3 text-sm text-slate-600">
-              {accionesData.data.items.slice(0, 5).map((accion) => (
+              {acciones.slice(0, 5).map((accion) => (
                 <li
                   key={accion.id}
                   className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
@@ -113,9 +92,9 @@ const Dashboard = () => {
                     </p>
                     <p className="text-xs text-slate-500">
                       {new Intl.DateTimeFormat('es-AR', { dateStyle: 'short' }).format(
-                        new Date(accion.fechaRealizacion || accion.fecha),
+                        new Date(accion.fecha_realizacion ?? accion.fechaRealizacion ?? accion.fecha)
                       )}{' '}
-                      · {accion.filial?.nombre || accion.filialNombre || 'Sin filial'}
+                      · {accion.filial?.nombre || accion.filial_nombre || accion.filialNombre || 'Sin filial'}
                     </p>
                   </div>
                   <Badge variant="info">{accion.tipo || 'Acción'}</Badge>
@@ -128,18 +107,22 @@ const Dashboard = () => {
         </Card>
 
         <Card title="Últimos temas del foro" linkLabel="Ir al foro" linkTo="/foro">
-          {temasData?.data?.items?.length ? (
+          {temas.length ? (
             <ul className="space-y-3 text-sm text-slate-600">
-              {temasData.data.items.slice(0, 5).map((tema) => (
+              {temas.slice(0, 5).map((tema) => (
                 <li
                   key={tema.id}
                   className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
                 >
                   <div>
                     <p className="font-semibold text-slate-800">{tema.titulo}</p>
-                    <p className="text-xs text-slate-500">{tema.usuario?.nombre || tema.autorNombre}</p>
+                    <p className="text-xs text-slate-500">
+                      {tema.usuario?.nombre || tema.autor_nombre || tema.autorNombre}
+                    </p>
                   </div>
-                  <Badge variant="neutral">{tema._count?.respuestas || tema.totalRespuestas || 0} respuestas</Badge>
+                  <Badge variant="neutral">
+                    {tema._count?.respuestas ?? tema.total_respuestas ?? tema.totalRespuestas ?? 0} respuestas
+                  </Badge>
                 </li>
               ))}
             </ul>
@@ -149,9 +132,9 @@ const Dashboard = () => {
         </Card>
 
         <Card title="Notificaciones recientes" linkLabel="Ver todas" linkTo="/notificaciones">
-          {notificacionesData?.data?.items?.length ? (
+          {notificaciones.length ? (
             <ul className="space-y-3 text-sm text-slate-600">
-              {notificacionesData.data.items.slice(0, 5).map((notificacion) => (
+              {notificaciones.slice(0, 5).map((notificacion) => (
                 <li key={notificacion.id} className="rounded-xl border border-slate-100 p-3">
                   <p className="font-semibold text-slate-800">{notificacion.titulo}</p>
                   <p className="text-xs text-slate-500">{notificacion.mensaje}</p>
@@ -164,20 +147,20 @@ const Dashboard = () => {
         </Card>
 
         <Card title="Próximos partidos" linkLabel="Ver solicitudes" linkTo="/entradas">
-          {fixtureData?.data?.items?.length ? (
+          {fixture.length ? (
             <ul className="space-y-3 text-sm text-slate-600">
-              {fixtureData.data.items.map((fixture) => (
+              {fixture.map((fixtureItem) => (
                 <li
-                  key={fixture.id}
+                  key={fixtureItem.id}
                   className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
                 >
                   <div>
-                    <p className="font-semibold text-slate-800">{fixture.rival}</p>
+                    <p className="font-semibold text-slate-800">{fixtureItem.rival}</p>
                     <p className="text-xs text-slate-500">
                       {new Intl.DateTimeFormat('es-AR', {
                         dateStyle: 'medium',
                         timeStyle: 'short',
-                      }).format(new Date(fixture.fecha))}
+                      }).format(new Date(fixtureItem.fecha))}
                     </p>
                   </div>
                   <CalendarClock className="h-5 w-5 text-red-600" />

@@ -80,14 +80,18 @@ export const useGestionTema = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, action }) => {
-      if (action === 'destacar') return foroApi.destacarTema(id);
+    mutationFn: ({ id, action, destacar }) => {
+      if (action === 'destacar') return foroApi.destacarTema(id, destacar ?? true);
       if (action === 'cerrar') return foroApi.cerrarTema(id);
       throw new Error('Acción inválida');
     },
     onSuccess: (_, variables) => {
       toast.success(
-        variables.action === 'destacar' ? 'Tema destacado' : 'Tema cerrado'
+        variables.action === 'destacar'
+          ? variables.destacar === false
+            ? 'Tema sin destacar'
+            : 'Tema destacado'
+          : 'Tema cerrado'
       );
       queryClient.invalidateQueries({ queryKey: ['foro', 'tema', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['foro', 'temas'] });

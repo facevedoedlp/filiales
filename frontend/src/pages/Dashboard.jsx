@@ -9,31 +9,37 @@ import Loading from '../components/common/Loading.jsx';
 import Badge from '../components/common/Badge.jsx';
 
 const Dashboard = () => {
-  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({ page: 1, limit: 20, esActiva: true });
+  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({ 
+    page: 1, 
+    limit: 200, 
+    esActiva: true 
+  });
   const { data: accionesData, isLoading: loadingAcciones } = useAcciones({ page: 1, limit: 5 });
   const { data: pedidosData } = usePedidosEntradas({ page: 1, limit: 5, aprobacionSocios: 'PENDIENTE' });
   const { data: fixtureData } = useFixture({ proximos: true, limit: 5 });
   const { data: temasData } = useTemas({ page: 1, limit: 5, orden: 'recientes' });
   const { data: notificacionesData } = useNotificaciones({ leida: false, limit: 5 });
 
-  const filiales = filialesData?.data?.filiales ?? filialesData?.data?.items ?? [];
   const acciones = accionesData?.data?.acciones ?? accionesData?.data?.items ?? [];
   const temas = temasData?.data?.temas ?? temasData?.data?.items ?? [];
   const fixture = fixtureData?.data ?? fixtureData?.data?.items ?? [];
   const notificaciones = notificacionesData?.data?.items ?? notificacionesData?.data ?? [];
 
-  const filialesTotal = filialesData?.data?.pagination?.total ?? filiales.length;
-  const integrantesTotal = filiales.reduce((sum, filial) => {
-    return sum + (filial.total_integrantes ?? filial.totalIntegrantes ?? filial.total_integrantes_activos ?? 0);
-  }, 0);
+  const filialesTotal = filialesData?.data?.pagination?.total ?? 0;
 
-  const accionesMes = acciones.filter((accion) => {
-    const fecha = new Date(accion.fecha_realizacion ?? accion.fechaRealizacion ?? accion.fecha);
+  const integrantesTotal = filialesData?.data?.filiales?.reduce((sum, filial) => {
+    return sum + (filial.totalIntegrantes || 0);
+  }, 0) ?? 0;
+
+  const accionesResumen = accionesData?.data?.items ?? accionesData?.data?.acciones ?? [];
+
+  const accionesMes = accionesResumen.filter((accion) => {
+    const fecha = new Date(accion.fechaRealizacion || accion.fecha || accion.fecha_realizacion);
     const hoy = new Date();
     return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
   }).length;
 
-  const pedidosPendientes = pedidosData?.data?.pagination?.total ?? pedidosData?.data?.total ?? 0;
+  const pedidosPendientes = pedidosData?.data?.pagination?.total ?? 0;
 
   const isLoading = loadingFiliales || loadingAcciones;
 

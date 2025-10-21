@@ -24,21 +24,26 @@ export const scopeFilial = (req, _res, next) => {
     const normalizedQuery = toCamelCase(req.query ?? {});
     req.query = normalizedQuery;
 
-    const isGlobalAdmin = req.user.rol === 'ADMIN_GLOBAL';
+    // ✅ Identificar si es ADMIN o ADMIN_GLOBAL (ambos tienen acceso total)
+    const isGlobalAdmin = req.user.rol === 'ADMIN_GLOBAL' || req.user.rol === 'ADMIN';
     const userFilialId = req.user.filial_id ?? req.user.filialId ?? null;
 
     req.scope = {
       isGlobalAdmin,
       filialId: isGlobalAdmin ? null : userFilialId,
+
       resolveFilialId: (requested) => {
+        // ✅ Si es ADMIN, puede acceder a cualquier filial o a todas si no especifica
         if (isGlobalAdmin) {
           return parseFilialId(requested);
         }
 
+        // ✅ Si NO es ADMIN y no tiene filial asignada, error
         if (!userFilialId) {
           throw errors.forbidden('Usuario sin filial asignada');
         }
 
+        // ✅ Si NO es ADMIN, solo puede ver su filial
         return userFilialId;
       },
     };

@@ -6,9 +6,19 @@ const router = express.Router();
 
 router.get('/', authenticateToken, filialesController.getFiliales);
 router.get('/:id', authenticateToken, filialesController.getFilialById);
-router.post('/', authenticateToken, requireRole('ADMIN'), filialesController.createFilial);
+router.post(
+  '/',
+  authenticateToken,
+  requireRole('ADMIN', 'ADMIN_GLOBAL'),
+  filialesController.createFilial,
+);
 router.put('/:id', authenticateToken, filialesController.updateFilial);
-router.delete('/:id', authenticateToken, requireRole('ADMIN'), filialesController.deleteFilial);
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRole('ADMIN', 'ADMIN_GLOBAL'),
+  filialesController.deleteFilial,
+);
 router.put('/:id/renovar', authenticateToken, filialesController.renovarAutoridades);
 router.get('/:id/estadisticas', authenticateToken, filialesController.getEstadisticas);
 

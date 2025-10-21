@@ -1,7 +1,7 @@
-import { z } from 'zod';
 import prisma from '../config/database.js';
 import { errors } from '../middleware/errorHandler.js';
-import { toCamelCase, toSnakeCase } from '../utils/case.utils.js';
+import { z } from 'zod';
+import { toCamelCase } from '../utils/case.utils.js';
 
 const parseInteger = (value) => {
   if (value === null || value === undefined || value === '') {
@@ -41,7 +41,6 @@ export const createFilial = async (req, res, next) => {
       mailAlternativo: data.mailAlternativo || null,
       telefono: data.telefono || null,
       fechaFundacion: data.fechaFundacion ? new Date(data.fechaFundacion) : null,
-      autoridades: data.autoridades || null,
       esActiva: data.esActiva !== undefined ? data.esActiva : true,
       esHabilitada: data.esHabilitada !== undefined ? data.esHabilitada : true,
       situacion: data.situacion || 'ACTIVA',
@@ -61,7 +60,7 @@ export const createFilial = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      data: toSnakeCase(filial),
+      data: filial,
       message: 'Filial creada exitosamente',
     });
   } catch (error) {
@@ -101,7 +100,6 @@ export const updateFilial = async (req, res, next) => {
     if (data.telefono !== undefined) filialData.telefono = data.telefono || null;
     if (data.fechaFundacion !== undefined)
       filialData.fechaFundacion = data.fechaFundacion ? new Date(data.fechaFundacion) : null;
-    if (data.autoridades !== undefined) filialData.autoridades = data.autoridades || null;
     if (data.esActiva !== undefined) filialData.esActiva = data.esActiva;
     if (data.esHabilitada !== undefined) filialData.esHabilitada = data.esHabilitada;
     if (data.situacion !== undefined) filialData.situacion = data.situacion;
@@ -122,7 +120,7 @@ export const updateFilial = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: toSnakeCase(filial),
+      data: filial,
       message: 'Filial actualizada exitosamente',
     });
   } catch (error) {
@@ -132,7 +130,6 @@ export const updateFilial = async (req, res, next) => {
 
 export const getFiliales = async (req, res, next) => {
   try {
-    const query = toCamelCase(req.query ?? {});
     const {
       page = 1,
       limit = 20,
@@ -142,32 +139,16 @@ export const getFiliales = async (req, res, next) => {
       busqueda,
       ordenar = 'nombre',
       orden = 'asc',
-    } = query;
+    } = req.query;
 
-    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
-    const take = Math.max(parseInt(limit, 10) || 20, 1);
-    const skip = (pageNumber - 1) * take;
-
+    const pageNumber = Math.max(Number.parseInt(page, 10) || 1, 1);
+    const limitNumber = Math.max(Number.parseInt(limit, 10) || 20, 1);
+    const skip = (pageNumber - 1) * limitNumber;
     const where = {};
 
-    if (esActiva !== undefined) {
-      if (typeof esActiva === 'boolean') {
-        where.esActiva = esActiva;
-      } else if (typeof esActiva === 'string') {
-        where.esActiva = esActiva.toLowerCase() === 'true';
-      }
-    }
-
-    const provinciaIdParsed = parseInteger(provinciaId);
-    if (provinciaIdParsed !== null) {
-      where.provinciaId = provinciaIdParsed;
-    }
-
-    const grupoIdParsed = parseInteger(grupoId);
-    if (grupoIdParsed !== null) {
-      where.grupoId = grupoIdParsed;
-    }
-
+    if (esActiva !== undefined) where.esActiva = esActiva === 'true' || esActiva === true;
+    if (provinciaId) where.provinciaId = parseInt(provinciaId, 10);
+    if (grupoId) where.grupoId = parseInt(grupoId, 10);
     if (busqueda) {
       where.OR = [
         { nombre: { contains: busqueda, mode: 'insensitive' } },
@@ -175,12 +156,11 @@ export const getFiliales = async (req, res, next) => {
       ];
     }
 
-    if (req.user?.rol === 'FILIAL' && req.user.filialId) {
+    if (req.user.rol === 'FILIAL' && req.user.filialId) {
       where.id = req.user.filialId;
     }
 
     const sortOrder = String(orden).toLowerCase() === 'desc' ? 'desc' : 'asc';
-    const orderBy = { [ordenar]: sortOrder };
 
     const [filiales, total] = await Promise.all([
       prisma.filial.findMany({
@@ -192,18 +172,17 @@ export const getFiliales = async (req, res, next) => {
           _count: {
             select: {
               integrantes: { where: { esActivo: true } },
-              acciones: true,
             },
           },
         },
-        orderBy,
+        orderBy: { [ordenar]: sortOrder },
         skip,
-        take,
+        take: limitNumber,
       }),
       prisma.filial.count({ where }),
     ]);
 
-    const filialesConTotal = filiales.map((filial) => ({
+    const filialesFormateadas = filiales.map((filial) => ({
       ...filial,
       totalIntegrantes: filial._count?.integrantes || 0,
       provinciaNombre: filial.provincia?.nombre,
@@ -213,15 +192,15 @@ export const getFiliales = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: toSnakeCase({
-        filiales: filialesConTotal,
+      data: {
+        filiales: filialesFormateadas,
         pagination: {
           page: pageNumber,
-          limit: take,
+          limit: limitNumber,
           total,
-          totalPages: take > 0 ? Math.ceil(total / take) : 0,
+          totalPages: Math.ceil(total / limitNumber),
         },
-      }),
+      },
     });
   } catch (error) {
     next(error);
@@ -237,7 +216,7 @@ export const getFilialById = async (req, res, next) => {
       throw errors.badRequest('ID inválido');
     }
 
-    if (req.user?.rol === 'FILIAL' && req.user.filialId !== filialId) {
+    if (req.user.rol === 'FILIAL' && req.user.filialId !== filialId) {
       throw errors.forbidden('No tienes acceso a esta filial');
     }
 
@@ -255,21 +234,9 @@ export const getFilialById = async (req, res, next) => {
           },
           orderBy: { esReferente: 'desc' },
         },
-        acciones: {
-          take: 10,
-          orderBy: { fechaCarga: 'desc' },
-          select: {
-            id: true,
-            descripcion: true,
-            fechaRealizacion: true,
-            imagenPromocion: true,
-          },
-        },
         _count: {
           select: {
             integrantes: { where: { esActivo: true } },
-            acciones: true,
-            entradasPedidos: true,
           },
         },
       },
@@ -290,7 +257,7 @@ export const getFilialById = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: toSnakeCase(filialConDatos),
+      data: filialConDatos,
     });
   } catch (error) {
     next(error);
@@ -300,14 +267,9 @@ export const getFilialById = async (req, res, next) => {
 export const deleteFilial = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const filialId = parseInt(id, 10);
-
-    if (Number.isNaN(filialId)) {
-      throw errors.badRequest('ID inválido');
-    }
 
     await prisma.filial.update({
-      where: { id: filialId },
+      where: { id: parseInt(id, 10) },
       data: { esActiva: false },
     });
 
@@ -329,20 +291,19 @@ export const renovarAutoridades = async (req, res, next) => {
       throw errors.badRequest('ID inválido');
     }
 
-    if (req.user?.rol === 'FILIAL' && req.user.filialId !== filialId) {
-      throw errors.forbidden('No tienes permiso para renovar esta filial');
+    if (req.user.rol === 'FILIAL' && req.user.filialId !== filialId) {
+      throw errors.forbidden('No tienes permiso');
     }
 
     const schema = z.object({
-      fechaRenovacion: z.string().datetime(),
-      actaRenovacion: z.string().optional(),
+      fechaRenovacion: z.string(),
+      observaciones: z.string().optional(),
     });
 
     const body = toCamelCase(req.body ?? {});
-    const { fechaRenovacion, actaRenovacion } = schema.parse(body);
+    const { fechaRenovacion } = schema.parse(body);
 
-    const renovacionFecha = new Date(fechaRenovacion);
-    const proximaRenovacion = new Date(renovacionFecha.getTime());
+    const proximaRenovacion = new Date(fechaRenovacion);
     proximaRenovacion.setFullYear(proximaRenovacion.getFullYear() + 2);
 
     const filial = await prisma.filial.update({
@@ -350,13 +311,12 @@ export const renovarAutoridades = async (req, res, next) => {
       data: {
         renovacionAutoridades: proximaRenovacion,
         esRenovada: true,
-        ...(actaRenovacion ? { actaConstitutiva: actaRenovacion } : {}),
       },
     });
 
     res.json({
       success: true,
-      data: toSnakeCase(filial),
+      data: filial,
       message: 'Autoridades renovadas exitosamente',
     });
   } catch (error) {
@@ -373,54 +333,23 @@ export const getEstadisticas = async (req, res, next) => {
       throw errors.badRequest('ID inválido');
     }
 
-    if (req.user?.rol === 'FILIAL' && req.user.filialId !== filialId) {
+    if (req.user.rol === 'FILIAL' && req.user.filialId !== filialId) {
       throw errors.forbidden('No tienes acceso');
     }
 
-    const ahora = new Date();
-    const inicioUltimoMes = new Date(ahora.getTime());
-    inicioUltimoMes.setMonth(inicioUltimoMes.getMonth() - 1);
-
-    const [
-      totalIntegrantes,
-      integrantesActivos,
-      referentes,
-      accionesUltimoMes,
-      totalAcciones,
-      entradasSolicitadas,
-    ] = await Promise.all([
+    const [totalIntegrantes, integrantesActivos, totalAcciones] = await Promise.all([
       prisma.integrante.count({ where: { filialId } }),
       prisma.integrante.count({ where: { filialId, esActivo: true } }),
-      prisma.integrante.count({ where: { filialId, esActivo: true, esReferente: true } }),
-      prisma.accion.count({
-        where: {
-          filialId,
-          fechaRealizacion: {
-            gte: inicioUltimoMes,
-          },
-        },
-      }),
       prisma.accion.count({ where: { filialId } }),
-      prisma.entradaPedido.count({ where: { filialId } }),
     ]);
 
     res.json({
       success: true,
-      data: toSnakeCase({
-        integrantes: {
-          total: totalIntegrantes,
-          activos: integrantesActivos,
-          inactivos: totalIntegrantes - integrantesActivos,
-          referentes,
-        },
-        acciones: {
-          total: totalAcciones,
-          ultimoMes: accionesUltimoMes,
-        },
-        entradas: {
-          solicitadas: entradasSolicitadas,
-        },
-      }),
+      data: {
+        totalIntegrantes,
+        integrantesActivos,
+        totalAcciones,
+      },
     });
   } catch (error) {
     next(error);

@@ -1,37 +1,52 @@
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import Button from '../components/common/Button.jsx';
-import Input from '../components/common/Input.jsx';
-import useAuth from '../hooks/useAuth.js';
-
-const schema = z.object({
-  correo: z.string().email('Correo inválido'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-});
+import { Navigate } from 'react-router-dom';
+import { Button } from '../components/common/Button';
+import Input from '../components/common/Input';
+import { useAuth } from '../hooks/useAuth';
+import { composeValidators, required } from '../utils/validators';
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(schema) });
+  } = useForm({
+    defaultValues: {
+      username: '',
+      password: '',
+    },
+  });
 
-  const onSubmit = async (values) => {
-    await login(values);
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const onSubmit = (values) => {
+    login(values);
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow">
-        <h2 className="text-2xl font-semibold text-center text-primary">Club Estudiantes de La Plata</h2>
-        <p className="mt-2 text-center text-sm text-slate-500">Gestión de Filiales</p>
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <Input label="Correo" type="email" {...register('correo')} error={errors.correo?.message} />
-          <Input label="Contraseña" type="password" {...register('password')} error={errors.password?.message} />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-50 to-slate-100 px-6">
+      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-xl">
+        <h1 className="text-2xl font-semibold text-red-600">Sistema de Filiales</h1>
+        <p className="mt-2 text-sm text-slate-500">Ingrese sus credenciales para continuar.</p>
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <Input
+            label="Usuario"
+            placeholder="usuario"
+            error={errors.username?.message}
+            {...register('username', composeValidators(required()))}
+          />
+          <Input
+            label="Contraseña"
+            type="password"
+            placeholder="••••••••"
+            error={errors.password?.message}
+            {...register('password', composeValidators(required()))}
+          />
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Ingresando...' : 'Ingresar'}
+            Ingresar
           </Button>
         </form>
       </div>

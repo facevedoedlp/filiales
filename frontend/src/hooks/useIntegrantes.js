@@ -1,62 +1,67 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { integrantesApi } from '../api/integrantes.js';
+import * as integrantesAPI from '../api/integrantes';
 
-export const useIntegrantes = (params = {}, options = {}) =>
-  useQuery({
-    queryKey: ['integrantes', params],
-    queryFn: () => integrantesApi.getAll(params),
-    staleTime: 5 * 60 * 1000,
-    keepPreviousData: true,
-    ...options
-  });
-
-export const useIntegrante = (id) =>
-  useQuery({
-    queryKey: ['integrante', id],
-    queryFn: () => integrantesApi.getById(id),
-    enabled: Boolean(id),
-  });
-
-export const useCreateIntegrante = () => {
+export const useIntegrantes = (filters) => {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: integrantesApi.create,
+
+  const integrantesQuery = useQuery({
+    queryKey: ['integrantes', filters],
+    queryFn: () => integrantesAPI.getAll(filters),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: integrantesAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
-      toast.success('Integrante creado exitosamente');
+      toast.success('Integrante creado');
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al crear integrante');
-    },
+    onError: () => toast.error('Error al crear integrante'),
   });
-};
 
-export const useUpdateIntegrante = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }) => integrantesApi.update(id, data),
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data, method = 'put' }) =>
+      method === 'patch' ? integrantesAPI.patch(id, data) : integrantesAPI.update(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['integrantes'] });
+      queryClient.invalidateQueries({ queryKey: ['integrante', variables.id] });
+      toast.success('Integrante actualizado');
+    },
+    onError: () => toast.error('Error al actualizar integrante'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: integrantesAPI.remove,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
-      toast.success('Integrante actualizado exitosamente');
+      toast.success('Integrante eliminado');
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al actualizar integrante');
-    },
+    onError: () => toast.error('No se pudo eliminar el integrante'),
   });
-};
 
-export const useToggleIntegrante = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, activo }) =>
-      activo ? integrantesApi.activar(id) : integrantesApi.desactivar(id),
+  const estadoMutation = useMutation({
+    mutationFn: ({ id, data }) => integrantesAPI.cambiarEstado(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
       toast.success('Estado actualizado');
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al cambiar estado');
-    },
+    onError: () => toast.error('No se pudo actualizar el estado'),
   });
+
+  return {
+    integrantes: integrantesQuery.data?.results || [],
+    meta: integrantesQuery.data?.meta,
+    isLoading: integrantesQuery.isLoading,
+    createIntegrante: createMutation.mutate,
+    updateIntegrante: updateMutation.mutate,
+    deleteIntegrante: deleteMutation.mutate,
+    changeEstado: estadoMutation.mutate,
+  };
 };
+
+export const useIntegrante = (id) =>
+  useQuery({
+    queryKey: ['integrante', id],
+    queryFn: () => integrantesAPI.getById(id),
+    enabled: Boolean(id),
+  });

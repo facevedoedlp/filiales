@@ -1,166 +1,54 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Ticket } from 'lucide-react';
-import { useAuthStore } from '../../store/authStore.js';
-import { usePedidosEntradas, useFixture } from '../../hooks/useEntradas.js';
-import { useFiliales } from '../../hooks/useFiliales.js';
-import Table from '../../components/common/Table.jsx';
-import Select from '../../components/common/Select.jsx';
-import SearchBar from '../../components/common/SearchBar.jsx';
-import Badge from '../../components/common/Badge.jsx';
-import Pagination from '../../components/common/Pagination.jsx';
-import Button from '../../components/common/Button.jsx';
-import Loading from '../../components/common/Loading.jsx';
-import EmptyState from '../../components/common/EmptyState.jsx';
-
-const estadoBadge = {
-  PENDIENTE: 'warning',
-  APROBADO: 'success',
-  RECHAZADO: 'danger',
-};
+import { useState } from 'react';
+import Spinner from '../../components/common/Spinner';
+import { useEntradas } from '../../hooks/useEntradas';
+import { useFiliales } from '../../hooks/useFiliales';
+import EntradaTable from '../../components/entradas/EntradaTable';
+import Select from '../../components/common/Select';
+import { ESTADOS_ENTRADA } from '../../utils/constants';
 
 const EntradasList = () => {
-  const { user } = useAuthStore();
-  const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ filialId: null, aprobacionSocios: null, fixtureId: null, busqueda: '' });
-  const { data: fixtureData } = useFixture({ proximos: true, limit: 20 });
-  const { data: filialesData } = useFiliales({ page: 1, limit: 200, esActiva: true });
-  const queryFilters = { ...filters };
-  Object.keys(queryFilters).forEach((key) => {
-    if (queryFilters[key] === null || queryFilters[key] === '') {
-      delete queryFilters[key];
-    }
-  });
-  const { data, isLoading } = usePedidosEntradas({ page, limit: 15, ...queryFilters });
-
-  const pedidos = data?.data?.items || [];
-  const pagination = data?.data?.pagination;
-
-  const fixtureOptions = fixtureData?.data?.items?.map((fixture) => ({
-    value: fixture.id,
-    label: `${fixture.rival} - ${new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium' }).format(new Date(fixture.fecha))}`,
-  })) || [];
-
-  const filialesOptions = filialesData?.data?.items?.map((filial) => ({
-    value: filial.id,
-    label: filial.nombre,
-  })) || [];
-
-  const columns = useMemo(
-    () => [
-      {
-        header: 'Partido',
-        accessor: 'fixture',
-        render: (row) => row.fixture?.rival || '—',
-      },
-      {
-        header: 'Filial',
-        accessor: 'filialNombre',
-      },
-      {
-        header: 'Personas',
-        accessor: 'personas',
-        render: (row) => row.personas?.length || 0,
-      },
-      {
-        header: 'Estado',
-        accessor: 'aprobacionSocios',
-        render: (row) => (
-          <Badge variant={estadoBadge[row.aprobacionSocios] || 'neutral'}>
-            {row.aprobacionSocios}
-          </Badge>
-        ),
-      },
-    ],
-    []
-  );
+  const [filters, setFilters] = useState({});
+  const { entradas, isLoading } = useEntradas(filters);
+  const { filiales } = useFiliales();
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Pedidos de entradas</h1>
-          <p className="text-sm text-slate-500">Consultá y gestioná las solicitudes de entradas para los partidos.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/entradas/solicitar">
-            <Button>Solicitar entradas</Button>
-          </Link>
-          {user?.rol === 'ADMIN' ? (
-            <Link to="/entradas/gestionar">
-              <Button variant="outline">Gestionar pedidos</Button>
-            </Link>
-          ) : null}
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">Solicitudes de entradas</h1>
+        <p className="text-sm text-slate-500">Consulta las solicitudes realizadas y su estado actual.</p>
       </div>
 
-      <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-4">
-        <Select
-          label="Partido"
-          value={fixtureOptions.find((option) => option.value === filters.fixtureId) || null}
-          onChange={(option) => {
-            setFilters((prev) => ({ ...prev, fixtureId: option?.value ?? null }));
-            setPage(1);
-          }}
-          options={fixtureOptions}
-          placeholder="Todos"
-        />
-
+      <div className="grid gap-4 md:grid-cols-3">
         <Select
           label="Filial"
-          value={filialesOptions.find((option) => option.value === filters.filialId) || null}
-          onChange={(option) => {
-            setFilters((prev) => ({ ...prev, filialId: option?.value ?? null }));
-            setPage(1);
-          }}
-          options={filialesOptions}
-          placeholder="Todas"
+          options={filiales?.map((filial) => ({ value: filial.id, label: filial.nombre })) || []}
+          value={filters.filial || ''}
+          onChange={(event) => setFilters((prev) => ({ ...prev, filial: event.target.value || undefined }))}
         />
-
         <Select
           label="Estado"
-          value={filters.aprobacionSocios ? { value: filters.aprobacionSocios, label: filters.aprobacionSocios } : null}
-          onChange={(option) => {
-            setFilters((prev) => ({ ...prev, aprobacionSocios: option?.value ?? null }));
-            setPage(1);
-          }}
-          options={[
-            { value: 'PENDIENTE', label: 'Pendiente' },
-            { value: 'APROBADO', label: 'Aprobado' },
-            { value: 'RECHAZADO', label: 'Rechazado' },
-          ]}
-          placeholder="Todos"
+          options={ESTADOS_ENTRADA}
+          value={filters.estado || ''}
+          onChange={(event) => setFilters((prev) => ({ ...prev, estado: event.target.value || undefined }))}
         />
-
-        <SearchBar
-          placeholder="Buscar por responsable"
-          onSearch={(value) => {
-            setFilters((prev) => ({ ...prev, busqueda: value }));
-            setPage(1);
-          }}
-        />
+        <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+          Fecha desde
+          <input
+            type="date"
+            value={filters.desde || ''}
+            onChange={(event) => setFilters((prev) => ({ ...prev, desde: event.target.value || undefined }))}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+          />
+        </label>
       </div>
 
       {isLoading ? (
-        <Loading message="Cargando pedidos" />
-      ) : pedidos.length === 0 ? (
-        <EmptyState
-          icon={Ticket}
-          title="No hay solicitudes"
-          description="Aún no se registraron pedidos con los filtros seleccionados."
-        />
+        <div className="flex justify-center py-16">
+          <Spinner size="lg" />
+        </div>
       ) : (
-        <Table columns={columns} data={pedidos} loading={isLoading} />
+        <EntradaTable entradas={entradas} />
       )}
-
-      {pagination ? (
-        <Pagination
-          page={pagination.page}
-          totalPages={pagination.totalPages}
-          total={pagination.total}
-          onPageChange={setPage}
-        />
-      ) : null}
     </div>
   );
 };

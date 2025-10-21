@@ -1,38 +1,36 @@
-import apiClient from './client.js';
+import api from './axios';
 
-export const filialesApi = {
-  getAll: async (params) => {
-    const response = await apiClient.get('/filiales', { params });
-    return response.data;
-  },
+export const getAll = async (params) => {
+  const { data } = await api.get('/api/filiales/', { params });
+  return data;
+};
 
-  getById: async (id) => {
-    const response = await apiClient.get(`/filiales/${id}`);
-    return response.data;
-  },
+export const getById = async (id) => {
+  const { data } = await api.get(`/api/filiales/${id}/`);
+  return data;
+};
 
-  create: async (data) => {
-    const response = await apiClient.post('/filiales', data);
-    return response.data;
-  },
+export const create = async (payload) => {
+  const { data } = await api.post('/api/filiales/', payload);
+  return data;
+};
 
-  update: async (id, data) => {
-    const response = await apiClient.put(`/filiales/${id}`, data);
-    return response.data;
-  },
+export const update = async (id, payload) => {
+  const { data } = await api.put(`/api/filiales/${id}/`, payload);
+  return data;
+};
 
-  delete: async (id) => {
-    const response = await apiClient.delete(`/filiales/${id}`);
-    return response.data;
-  },
+export const patch = async (id, payload) => {
+  const { data } = await api.patch(`/api/filiales/${id}/`, payload);
+  return data;
+};
 
-  renovar: async (id, data) => {
-    const response = await apiClient.put(`/filiales/${id}/renovar`, data);
-    return response.data;
-  },
+export const remove = async (id) => {
+  const { data } = await api.delete(`/api/filiales/${id}/`);
+  return data;
+};
 
-  getEstadisticas: async (id) => {
-    const response = await apiClient.get(`/filiales/${id}/estadisticas`);
-    return response.data;
-  },
+export const getMapa = async () => {
+  const { data } = await api.get('/api/filiales/mapa/');
+  return data;
 };

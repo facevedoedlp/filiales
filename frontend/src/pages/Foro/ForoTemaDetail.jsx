@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Lock, Pin, Reply, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
@@ -16,6 +16,48 @@ import TextArea from '../../components/common/TextArea.jsx';
 import Button from '../../components/common/Button.jsx';
 import ForoRespuesta from '../../components/foro/ForoRespuesta.jsx';
 
+const normalizarTema = (temaRaw) => {
+  if (!temaRaw) {
+    return null;
+  }
+
+  const creadoEn = temaRaw.creado_en ?? temaRaw.creadoEn ?? temaRaw.createdAt ?? temaRaw.created_at;
+  const autorId = temaRaw.autor_id ?? temaRaw.autorId ?? temaRaw.usuario?.id ?? null;
+  const autorNombre = temaRaw.autor_nombre ?? temaRaw.autorNombre ?? temaRaw.usuario?.nombre ?? 'Autor';
+  const filialNombre =
+    temaRaw.filial_nombre ?? temaRaw.filialNombre ?? temaRaw.usuario?.filial?.nombre ?? 'Sin filial';
+  const destacado = temaRaw.destacado ?? temaRaw.es_destacado ?? temaRaw.esDestacado ?? false;
+  const cerrado = temaRaw.cerrado ?? temaRaw.es_cerrado ?? temaRaw.esCerrado ?? false;
+  const etiquetas = (temaRaw.etiquetas ?? []).map((etiqueta) => etiqueta.nombre ?? etiqueta);
+
+  const respuestas = (temaRaw.respuestas ?? []).map((respuesta) => {
+    const creadoEnRespuesta =
+      respuesta.creado_en ?? respuesta.creadoEn ?? respuesta.createdAt ?? respuesta.created_at;
+    const autorRespuestaId = respuesta.autor_id ?? respuesta.autorId ?? respuesta.usuario?.id ?? null;
+    const autorRespuestaNombre =
+      respuesta.autor_nombre ?? respuesta.autorNombre ?? respuesta.usuario?.nombre ?? 'Integrante';
+
+    return {
+      ...respuesta,
+      autorId: autorRespuestaId,
+      autorNombre: autorRespuestaNombre,
+      creadoEn: creadoEnRespuesta,
+    };
+  });
+
+  return {
+    ...temaRaw,
+    autorId,
+    autorNombre,
+    filialNombre,
+    destacado,
+    cerrado,
+    etiquetas,
+    creadoEn,
+    respuestas,
+  };
+};
+
 const ForoTemaDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -28,9 +70,10 @@ const ForoTemaDetail = () => {
   const gestionarTema = useGestionTema();
   const [respuesta, setRespuesta] = useState('');
 
-  const tema = data?.data;
-  const respuestas = tema?.respuestas || [];
-  const puedeGestionar = user?.rol === 'ADMIN' || user?.id === tema?.autorId;
+  const tema = useMemo(() => normalizarTema(data?.data), [data]);
+  const respuestas = tema?.respuestas ?? [];
+  const puedeGestionar =
+    user?.rol === 'ADMIN' || user?.rol === 'ADMIN_GLOBAL' || user?.id === tema?.autorId;
 
   const handleResponder = async () => {
     if (!respuesta.trim()) return;
@@ -51,7 +94,10 @@ const ForoTemaDetail = () => {
     return <EmptyState title="Tema no encontrado" description="El contenido pudo haber sido eliminado." />;
   }
 
-  const puedeEditarTema = puedeGestionar && Date.now() - new Date(tema.creadoEn).getTime() < 15 * 60 * 1000;
+  const puedeEditarTema =
+    puedeGestionar && tema.creadoEn
+      ? Date.now() - new Date(tema.creadoEn).getTime() < 15 * 60 * 1000
+      : false;
 
   return (
     <div className="space-y-6">
@@ -101,16 +147,16 @@ const ForoTemaDetail = () => {
             >
               {tema.cerrado ? 'Tema cerrado' : 'Cerrar tema'}
             </Button>
-            {user?.rol === 'ADMIN' ? (
+            {['ADMIN', 'ADMIN_GLOBAL'].includes(user?.rol) ? (
               <Button
                 variant="outline"
-                onClick={() => gestionarTema.mutate({ id, action: 'destacar' })}
+                onClick={() => gestionarTema.mutate({ id, action: 'destacar', destacar: !tema.destacado })}
                 disabled={gestionarTema.isPending}
               >
-                {tema.destacado ? 'Destacado' : 'Destacar'}
+                {tema.destacado ? 'Quitar destacado' : 'Destacar'}
               </Button>
             ) : null}
-            {user?.rol === 'ADMIN' ? (
+            {['ADMIN', 'ADMIN_GLOBAL'].includes(user?.rol) ? (
               <Button variant="outline" onClick={handleEliminarTema}>
                 <Trash2 className="mr-1 h-4 w-4" /> Eliminar
               </Button>
@@ -130,7 +176,7 @@ const ForoTemaDetail = () => {
                 respuestaItem.autorId === user?.id &&
                 Date.now() - new Date(respuestaItem.creadoEn).getTime() < 15 * 60 * 1000;
               const puedeEliminarRespuesta =
-                respuestaItem.autorId === user?.id || user?.rol === 'ADMIN';
+                respuestaItem.autorId === user?.id || ['ADMIN', 'ADMIN_GLOBAL'].includes(user?.rol);
               return (
                 <ForoRespuesta
                   key={respuestaItem.id}

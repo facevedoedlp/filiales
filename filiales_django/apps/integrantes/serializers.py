@@ -18,9 +18,11 @@ class IntegranteSerializer(serializers.ModelSerializer):
             "apellido",
             "documento",
             "telefono",
+            "avatar",
             "filial",
             "rol",
             "estado_membresia",
+            "fecha_nacimiento",
             "fecha_ingreso",
             "is_active",
         ]
@@ -33,3 +35,40 @@ class CambiarEstadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Integrante
         fields = ["rol", "estado_membresia", "is_active"]
+
+
+class PerfilSerializer(serializers.ModelSerializer):
+    """Serializador para actualizar datos básicos del perfil."""
+
+    class Meta:
+        model = Integrante
+        fields = ["email", "nombre", "apellido", "telefono", "avatar", "fecha_nacimiento"]
+
+
+class RegistroIntegranteSerializer(serializers.ModelSerializer):
+    """Serializador utilizado para el registro público de usuarios."""
+
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    class Meta:
+        model = Integrante
+        fields = [
+            "id",
+            "username",
+            "password",
+            "email",
+            "nombre",
+            "apellido",
+            "documento",
+            "telefono",
+            "fecha_nacimiento",
+        ]
+        read_only_fields = ("id",)
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        usuario = Integrante(**validated_data)
+        usuario.set_password(password)
+        usuario.rol = Integrante.Rol.INTEGRANTE
+        usuario.save()
+        return usuario

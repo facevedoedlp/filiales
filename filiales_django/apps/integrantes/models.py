@@ -40,6 +40,7 @@ class Integrante(AbstractUser):
     apellido = models.CharField("apellido", max_length=150)
     documento = models.CharField("documento", max_length=20, unique=True)
     telefono = models.CharField("teléfono", max_length=20, blank=True)
+    avatar = models.ImageField("avatar", upload_to="avatars/", null=True, blank=True)
     filial = models.ForeignKey(
         "filiales.Filial",
         related_name="integrantes",
@@ -54,6 +55,7 @@ class Integrante(AbstractUser):
         choices=EstadoMembresia.choices,
         default=EstadoMembresia.VIGENTE,
     )
+    fecha_nacimiento = models.DateField("fecha de nacimiento", null=True, blank=True)
     fecha_ingreso = models.DateField("fecha de ingreso", default=timezone.now)
 
     objects = IntegranteManager()

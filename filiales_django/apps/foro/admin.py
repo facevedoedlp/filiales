@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Categoria, Hilo, Respuesta
+from .models import Categoria, Respuesta, Tema
 
 
 @admin.register(Categoria)
@@ -14,15 +14,15 @@ class RespuestaInline(admin.TabularInline):
     extra = 1
 
 
-@admin.register(Hilo)
-class HiloAdmin(admin.ModelAdmin):
-    list_display = ("titulo", "categoria", "autor", "estado", "creado")
-    list_filter = ("estado", "categoria")
+@admin.register(Tema)
+class TemaAdmin(admin.ModelAdmin):
+    list_display = ("titulo", "categoria", "autor", "fijado", "cerrado", "created_at")
+    list_filter = ("categoria", "fijado", "cerrado")
     search_fields = ("titulo", "contenido")
     inlines = [RespuestaInline]
 
 
 @admin.register(Respuesta)
 class RespuestaAdmin(admin.ModelAdmin):
-    list_display = ("hilo", "autor", "creado", "es_moderada")
+    list_display = ("tema", "autor", "created_at", "es_moderada")
     list_filter = ("es_moderada",)

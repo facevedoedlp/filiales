@@ -12,7 +12,6 @@ import { geografiaService } from '../../services/geografia.service.js';
 import Input from '../../components/common/Input.jsx';
 import Button from '../../components/common/Button.jsx';
 import Loading from '../../components/common/Loading.jsx';
-import TextArea from '../../components/common/TextArea.jsx';
 import SelectSearch from '../../components/common/SelectSearch.jsx';
 
 const filialSchema = z.object({
@@ -39,7 +38,6 @@ const filialSchema = z.object({
   telefono: z.string().optional(),
   direccion: z.string().optional(),
   fechaFundacion: z.string().optional(),
-  autoridades: z.string().optional(),
 });
 
 const FilialForm = () => {
@@ -72,7 +70,6 @@ const FilialForm = () => {
       telefono: '',
       direccion: '',
       fechaFundacion: '',
-      autoridades: '',
     },
   });
 
@@ -131,8 +128,6 @@ const FilialForm = () => {
         setValue('fechaFundacion', fechaFormateada);
       }
 
-      setValue('autoridades', payload.autoridades ?? '');
-
       if (payload.provinciaId) {
         const provincia = provincias.find(
           (item) => item.value === payload.provinciaId.toString(),
@@ -164,7 +159,6 @@ const FilialForm = () => {
         telefono: values.telefono || null,
         direccion: values.direccion || null,
         fechaFundacion: values.fechaFundacion || null,
-        autoridades: values.autoridades || null,
         paisId: 1,
       };
 
@@ -284,15 +278,6 @@ const FilialForm = () => {
             error={errors.fechaFundacion?.message}
           />
         </div>
-
-        <TextArea
-          label="Autoridades"
-          rows={4}
-          placeholder="Describe las autoridades de la filial..."
-          {...register('autoridades')}
-          error={errors.autoridades?.message}
-          maxLength={500}
-        />
 
         <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
           <Button

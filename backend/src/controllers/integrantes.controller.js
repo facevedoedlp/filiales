@@ -55,11 +55,35 @@ export const getIntegrantes = async (req, res) => {
 
     const whereClause = {};
 
-    const resolvedFilialId = req.scope?.resolveFilialId(filialId);
-    if (resolvedFilialId !== null && resolvedFilialId !== undefined) {
-      whereClause.filialId = resolvedFilialId;
-    } else if (!req.scope?.isGlobalAdmin && req.scope?.filialId) {
-      whereClause.filialId = req.scope.filialId;
+    // ✅ LÓGICA CORREGIDA para ADMIN
+    if (req.scope?.isGlobalAdmin) {
+      // ✅ Si es ADMIN y especificó filialId, filtrar por esa filial
+      if (filialId) {
+        const filialIdParsed = Number.parseInt(filialId, 10);
+
+        if (Number.isNaN(filialIdParsed)) {
+          return res.status(400).json({
+            success: false,
+            message: 'filialId debe ser un número válido',
+          });
+        }
+
+        whereClause.filialId = filialIdParsed;
+      }
+      // ✅ Si es ADMIN y NO especificó filialId, mostrar TODOS (no filtrar por filial)
+    } else {
+      // ✅ Si NO es ADMIN, aplicar scope de filial
+      const resolvedFilialId = req.scope?.resolveFilialId(filialId);
+
+      if (resolvedFilialId !== null && resolvedFilialId !== undefined) {
+        whereClause.filialId = resolvedFilialId;
+      } else {
+        // Si no tiene filial y no es admin, error
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes acceso a ver integrantes',
+        });
+      }
     }
 
     const esActivoFilter = parseBoolean(esActivo);
@@ -70,7 +94,7 @@ export const getIntegrantes = async (req, res) => {
     if (busqueda) {
       whereClause.OR = [
         { nombre: { contains: busqueda, mode: 'insensitive' } },
-        { correo: { contains: busqueda, mode: 'insensitive' } },
+        { email: { contains: busqueda, mode: 'insensitive' } },
       ];
     }
 
@@ -100,49 +124,12 @@ export const getIntegrantes = async (req, res) => {
       prisma.integrante.count({ where: whereClause }),
     ]);
 
-    const filialIds = [...new Set(integrantes.map((integrante) => integrante.filialId).filter(Boolean))];
-
-    let totalActivosPorFilial = {};
-    if (filialIds.length > 0) {
-      const grupos = await prisma.integrante.groupBy({
-        by: ['filialId'],
-        where: {
-          filialId: { in: filialIds },
-          esActivo: true,
-        },
-        _count: {
-          _all: true,
-        },
-      });
-
-      totalActivosPorFilial = grupos.reduce((acc, item) => {
-        acc[item.filialId] = item._count._all;
-        return acc;
-      }, {});
-    }
-
-    const integrantesFormateados = integrantes.map((integrante) => {
-      const totalActivos = totalActivosPorFilial[integrante.filialId] ?? 0;
-      return formatIntegrante(
-        {
-          ...integrante,
-          filial: integrante.filial
-            ? {
-                ...integrante.filial,
-                totalIntegrantesActivos: totalActivos,
-              }
-            : null,
-        },
-        totalActivos,
-      );
-    });
-
     const totalPages = take > 0 ? Math.ceil(total / take) : 0;
 
     res.json({
       success: true,
       data: toSnakeCase({
-        items: integrantesFormateados,
+        items: integrantes.map(formatIntegrante),
         pagination: {
           page: pageNumber,
           limit: take,

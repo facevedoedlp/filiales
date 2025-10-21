@@ -8,8 +8,7 @@ export const useIntegrantes = (params = {}, options = {}) =>
     queryFn: () => integrantesApi.getAll(params),
     staleTime: 5 * 60 * 1000,
     keepPreviousData: true,
-    enabled: Boolean(params.filialId), // Solo ejecutar si hay filialId
-    ...options,
+    ...options
   });
 
 export const useIntegrante = (id) =>

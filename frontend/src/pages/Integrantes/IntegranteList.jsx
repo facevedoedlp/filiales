@@ -25,10 +25,10 @@ const IntegranteList = () => {
   const [confirmToggle, setConfirmToggle] = useState(null);
 
   // Cargar filiales
-  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({ 
-    page: 1, 
-    limit: 200, 
-    esActiva: true 
+  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({
+    page: 1,
+    limit: 200,
+    esActiva: true
   });
 
   const filialOptions = useMemo(() => {
@@ -40,18 +40,14 @@ const IntegranteList = () => {
     );
   }, [filialesData]);
 
-  // ✅ Auto-seleccionar la primera filial si no hay ninguna seleccionada
+  // ✅ Auto-seleccionar filial SOLO si NO es ADMIN
   useEffect(() => {
-    if (!filialId && filialOptions.length > 0) {
-      // Si el usuario tiene una filial asignada, usar esa
-      if (user?.filialId && filialOptions.find(f => f.value === user.filialId)) {
-        setFilialId(user.filialId);
-      } else {
-        // Si no, usar la primera de la lista
-        setFilialId(filialOptions[0].value);
-      }
+    const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'ADMIN_GLOBAL';
+
+    if (!filialId && filialOptions.length > 0 && !isAdmin) {
+      setFilialId(user?.filialId || filialOptions[0].value);
     }
-  }, [filialOptions, filialId, user?.filialId]);
+  }, [filialOptions, filialId, user?.filialId, user?.rol]);
 
   // Preparar parámetros de búsqueda
   const queryFilters = { ...filters };
@@ -61,16 +57,17 @@ const IntegranteList = () => {
     }
   });
 
-  const integranteParams = { 
-    page, 
-    limit: 20, 
+  const integranteParams = {
+    page,
+    limit: 20,
     ...queryFilters,
-    filialId // ✅ Siempre incluir filialId
+    ...(filialId && { filialId })
   };
 
-  // ✅ Solo hacer la query si hay filialId
+  // ✅ ADMIN puede ver sin filialId, otros usuarios requieren filialId
+  const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'ADMIN_GLOBAL';
   const { data, isLoading } = useIntegrantes(integranteParams, {
-    enabled: Boolean(filialId)
+    enabled: isAdmin || Boolean(filialId)
   });
   
   const toggleIntegrante = useToggleIntegrante();

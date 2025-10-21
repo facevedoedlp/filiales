@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { integrantesApi } from '../api/integrantes.js';
 
+<<<<<<< HEAD
 const normalizeIntegrantesParams = (params = {}) => {
   const base = {
     filial_id: params.filial_id ?? params.filialId ?? null,
@@ -34,7 +35,16 @@ export const useIntegrantes = (params = {}) => {
   return useQuery({
     queryKey: ['integrantes', queryKeyPayload],
     queryFn: () => integrantesApi.getAll(requestParams),
+=======
+export const useIntegrantes = (params = {}, options = {}) =>
+  useQuery({
+    queryKey: ['integrantes', params],
+    queryFn: () => integrantesApi.getAll(params),
+    staleTime: 5 * 60 * 1000,
+>>>>>>> ad3da76 (cambios ok)
     keepPreviousData: true,
+    enabled: true, // Por defecto habilitado
+    ...options  // ✅ Permite pasar `enabled: false` desde el componente
   });
 };
 
@@ -50,17 +60,20 @@ export const useCreateIntegrante = () => {
 
   return useMutation({
     mutationFn: integrantesApi.create,
-    onSuccess: (_, variables) => {
-      toast.success('Integrante creado correctamente');
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
+<<<<<<< HEAD
       if (variables?.filial_id) {
         queryClient.invalidateQueries({
           queryKey: ['integrantes', { filial_id: variables.filial_id }],
         });
       }
+=======
+      toast.success('Integrante creado exitosamente');
+>>>>>>> ad3da76 (cambios ok)
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Error al crear integrante');
+      toast.error(error.response?.data?.message || 'Error al crear integrante');
     },
   });
 };
@@ -70,18 +83,21 @@ export const useUpdateIntegrante = () => {
 
   return useMutation({
     mutationFn: ({ id, data }) => integrantesApi.update(id, data),
-    onSuccess: (_, variables) => {
-      toast.success('Integrante actualizado');
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
+<<<<<<< HEAD
       queryClient.invalidateQueries({ queryKey: ['integrante', variables.id] });
       if (variables?.data?.filial_id) {
         queryClient.invalidateQueries({
           queryKey: ['integrantes', { filial_id: variables.data.filial_id }],
         });
       }
+=======
+      toast.success('Integrante actualizado exitosamente');
+>>>>>>> ad3da76 (cambios ok)
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Error al actualizar integrante');
+      toast.error(error.response?.data?.message || 'Error al actualizar integrante');
     },
   });
 };
@@ -90,19 +106,22 @@ export const useToggleIntegrante = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, activo }) => (activo ? integrantesApi.activar(id) : integrantesApi.desactivar(id)),
-    onSuccess: (_, variables) => {
-      toast.success(variables.activo ? 'Integrante activado' : 'Integrante desactivado');
+    mutationFn: ({ id, activo }) => integrantesApi.toggle(id, activo),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
+<<<<<<< HEAD
       queryClient.invalidateQueries({ queryKey: ['integrante', variables.id] });
       if (variables?.filial_id) {
         queryClient.invalidateQueries({
           queryKey: ['integrantes', { filial_id: variables.filial_id }],
         });
       }
+=======
+      toast.success('Estado actualizado');
+>>>>>>> ad3da76 (cambios ok)
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'No se pudo actualizar el integrante');
+      toast.error(error.response?.data?.message || 'Error al cambiar estado');
     },
   });
 };

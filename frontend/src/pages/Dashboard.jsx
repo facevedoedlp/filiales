@@ -9,6 +9,7 @@ import Loading from '../components/common/Loading.jsx';
 import Badge from '../components/common/Badge.jsx';
 
 const Dashboard = () => {
+<<<<<<< HEAD
   const { data: filialesData, isLoading: loadingFiliales } = useFiliales({
     page: 1,
     limit: 200,
@@ -23,16 +24,30 @@ const Dashboard = () => {
     limit: 5,
     aprobacionSocios: 'PENDIENTE',
   });
+=======
+  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({ page: 1, limit: 5, esActiva: true });
+  const { data: accionesData, isLoading: loadingAcciones } = useAcciones({ page: 1, limit: 5 });
+  const { data: pedidosData } = usePedidosEntradas({ page: 1, limit: 5, aprobacionSocios: 'PENDIENTE' });
+>>>>>>> ad3da76 (cambios ok)
   const { data: fixtureData } = useFixture({ proximos: true, limit: 5 });
   const { data: temasData } = useTemas({ page: 1, limit: 5, orden: 'recientes' });
   const { data: notificacionesData } = useNotificaciones({ leida: false });
 
   const filialesTotal = filialesData?.data?.pagination?.total ?? 0;
+<<<<<<< HEAD
   const integrantesTotal =
     filialesData?.data?.items?.reduce((sum, filial) => {
       return sum + (filial._count?.integrantes || filial.totalIntegrantesActivos || 0);
     }, 0) ?? 0;
 
+=======
+  
+  // ✅ Calcular integrantes totales desde las filiales
+  const integrantesTotal = filialesData?.data?.items?.reduce((sum, filial) => {
+    return sum + (filial.totalIntegrantesActivos || filial._count?.integrantes || 0);
+  }, 0) ?? 0;
+  
+>>>>>>> ad3da76 (cambios ok)
   const accionesMes = (accionesData?.data?.items || []).filter((accion) => {
     const fecha = new Date(accion.fechaRealizacion || accion.fecha);
     const hoy = new Date();

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { filialesApi } from '../api/filiales.js';
+import { filialesApi } from '../api/filiales.js'; // ✅ RUTA CORRECTA
 
 export const useFiliales = (params = {}) =>
   useQuery({
@@ -35,7 +35,7 @@ export const useCreateFilial = () => {
       toast.success('Filial creada exitosamente');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Error al crear filial');
+      toast.error(error.response?.data?.message || 'Error al crear filial');
     },
   });
 };
@@ -51,7 +51,7 @@ export const useUpdateFilial = () => {
       toast.success('Filial actualizada exitosamente');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Error al actualizar filial');
+      toast.error(error.response?.data?.message || 'Error al actualizar filial');
     },
   });
 };
@@ -66,7 +66,7 @@ export const useDeleteFilial = () => {
       toast.success('Filial desactivada');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Error al desactivar filial');
+      toast.error(error.response?.data?.message || 'Error al desactivar filial');
     },
   });
 };
@@ -81,7 +81,7 @@ export const useRenovarFilial = () => {
       toast.success('Autoridades renovadas exitosamente');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'Error al renovar autoridades');
+      toast.error(error.response?.data?.message || 'Error al renovar autoridades');
     },
   });
 };

@@ -22,6 +22,7 @@ const FilialList = () => {
   const [confirmId, setConfirmId] = useState(null);
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  
   const queryFilters = { ...filters };
   Object.keys(queryFilters).forEach((key) => {
     if (queryFilters[key] === null || queryFilters[key] === '') {
@@ -34,7 +35,7 @@ const FilialList = () => {
 
   const provinciasOptions = useMemo(() => {
     const unique = new Map();
-    data?.data?.items?.forEach((filial) => {
+    data?.data?.filiales?.forEach((filial) => {
       if (filial.provinciaId && filial.provinciaNombre && !unique.has(filial.provinciaId)) {
         unique.set(filial.provinciaId, {
           value: filial.provinciaId,
@@ -98,7 +99,7 @@ const FilialList = () => {
   };
 
   const pagination = data?.data?.pagination;
-  const items = data?.data?.items || [];
+  const items = data?.data?.filiales || [];
 
   return (
     <div className="space-y-6">

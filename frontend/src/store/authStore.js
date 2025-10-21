@@ -3,14 +3,29 @@ import { persist } from 'zustand/middleware';
 
 export const useAuthStore = create(
   persist(
-    (set) => ({
-      token: null,
+    (set, get) => ({
       user: null,
-      setCredentials: (token, user) => set({ token, user }),
-      clear: () => set({ token: null, user: null }),
+      token: null,
+      
+      setCredentials: (token, user) => {
+        console.log('💾 Guardando credenciales:', { 
+          hasToken: !!token, 
+          userName: user?.nombre 
+        });
+        
+        set({ token, user });
+        
+        console.log('✅ Credenciales guardadas en Zustand');
+      },
+      
+      clear: () => {
+        console.log('🚪 Limpiando credenciales...');
+        set({ token: null, user: null });
+        console.log('✅ Credenciales limpiadas');
+      },
     }),
     {
-      name: 'filiales-auth',
+      name: 'auth-storage',
     }
   )
 );

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useEffect, useMemo, useState } from 'react';
+=======
+import { useMemo, useState, useEffect } from 'react';
+>>>>>>> ad3da76 (cambios ok)
 import { Link } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
@@ -19,12 +23,17 @@ import ConfirmDialog from '../../components/common/ConfirmDialog.jsx';
 
 const IntegranteList = () => {
   const { user } = useAuthStore();
+<<<<<<< HEAD
   const isGlobalAdmin = user?.rol === 'ADMIN_GLOBAL';
   const [filialId, setFilialId] = useState(isGlobalAdmin ? null : user?.filial_id ?? null);
+=======
+  const [filialId, setFilialId] = useState(null);
+>>>>>>> ad3da76 (cambios ok)
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({ es_activo: null, cargo: null, busqueda: '' });
   const [confirmToggle, setConfirmToggle] = useState(null);
 
+<<<<<<< HEAD
   const { data: filialesData } = useFiliales({ page: 1, limit: 200, esActiva: true });
   const resolvedFilialId = isGlobalAdmin ? filialId : user?.filial_id ?? null;
   const integranteParams = {
@@ -37,6 +46,57 @@ const IntegranteList = () => {
   };
 
   const { data, isLoading } = useIntegrantes(integranteParams);
+=======
+  // Cargar filiales
+  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({ 
+    page: 1, 
+    limit: 200, 
+    esActiva: true 
+  });
+
+  const filialOptions = useMemo(() => {
+    return (
+      filialesData?.data?.filiales?.map((filial) => ({
+        value: filial.id,
+        label: filial.nombre,
+      })) || []
+    );
+  }, [filialesData]);
+
+  // ✅ Auto-seleccionar la primera filial si no hay ninguna seleccionada
+  useEffect(() => {
+    if (!filialId && filialOptions.length > 0) {
+      // Si el usuario tiene una filial asignada, usar esa
+      if (user?.filialId && filialOptions.find(f => f.value === user.filialId)) {
+        setFilialId(user.filialId);
+      } else {
+        // Si no, usar la primera de la lista
+        setFilialId(filialOptions[0].value);
+      }
+    }
+  }, [filialOptions, filialId, user?.filialId]);
+
+  // Preparar parámetros de búsqueda
+  const queryFilters = { ...filters };
+  Object.keys(queryFilters).forEach((key) => {
+    if (queryFilters[key] === null || queryFilters[key] === '') {
+      delete queryFilters[key];
+    }
+  });
+
+  const integranteParams = { 
+    page, 
+    limit: 20, 
+    ...queryFilters,
+    filialId // ✅ Siempre incluir filialId
+  };
+
+  // ✅ Solo hacer la query si hay filialId
+  const { data, isLoading } = useIntegrantes(integranteParams, {
+    enabled: Boolean(filialId)
+  });
+  
+>>>>>>> ad3da76 (cambios ok)
   const toggleIntegrante = useToggleIntegrante();
 
   useEffect(() => {
@@ -47,15 +107,6 @@ const IntegranteList = () => {
 
   const integrantes = data?.data?.items || [];
   const pagination = data?.data?.pagination;
-
-  const filialOptions = useMemo(() => {
-    return (
-      filialesData?.data?.items?.map((filial) => ({
-        value: filial.id,
-        label: filial.nombre,
-      })) || []
-    );
-  }, [filialesData]);
 
   const cargoOptions = useMemo(() => {
     const unique = new Set();
@@ -102,6 +153,24 @@ const IntegranteList = () => {
       ),
     },
   ];
+
+  // ✅ Mostrar loading mientras se cargan las filiales
+  if (loadingFiliales) {
+    return <Loading message="Cargando filiales..." />;
+  }
+
+  // ✅ Si no hay filiales en el sistema
+  if (filialOptions.length === 0) {
+    return (
+      <EmptyState
+        icon={Users}
+        title="No hay filiales disponibles"
+        description="Primero necesitas crear al menos una filial para poder gestionar integrantes."
+        actionLabel={user?.rol === 'ADMIN' ? 'Crear filial' : undefined}
+        onAction={user?.rol === 'ADMIN' ? () => window.location.href = '/filiales/nueva' : undefined}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -162,25 +231,34 @@ const IntegranteList = () => {
           ]}
         />
 
-        <Select
-          label="Cargo"
-          value={cargoOptions.find((option) => option.value === filters.cargo) || null}
-          onChange={(option) => {
-            setFilters((prev) => ({ ...prev, cargo: option?.value ?? null }));
-            setPage(1);
-          }}
-          options={cargoOptions}
-          placeholder="Todos"
-        />
+        {cargoOptions.length > 0 && (
+          <Select
+            label="Cargo"
+            value={cargoOptions.find((option) => option.value === filters.cargo) || null}
+            onChange={(option) => {
+              setFilters((prev) => ({ ...prev, cargo: option?.value ?? null }));
+              setPage(1);
+            }}
+            options={cargoOptions}
+            placeholder="Todos"
+            className="md:col-span-4"
+          />
+        )}
       </div>
 
       {isLoading ? (
+<<<<<<< HEAD
         <Loading message="Cargando integrantes" />
+=======
+        <Loading message="Cargando integrantes..." />
+>>>>>>> ad3da76 (cambios ok)
       ) : integrantes.length === 0 ? (
         <EmptyState
           icon={Users}
           title="Sin integrantes"
-          description="No hay integrantes registrados con los filtros seleccionados."
+          description="No hay integrantes registrados en esta filial con los filtros seleccionados."
+          actionLabel="Agregar primer integrante"
+          onAction={() => window.location.href = '/integrantes/nuevo'}
         />
       ) : (
         <Table

@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+
+
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -23,6 +26,7 @@ import ForoTemaDetail from './pages/Foro/ForoTemaDetail.jsx';
 import NotificacionList from './pages/Notificaciones/NotificacionList.jsx';
 
 function App() {
+
   return (
     <BrowserRouter>
       <Toaster position="top-right" />

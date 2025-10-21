@@ -1,33 +1,41 @@
-import apiClient from './client.js';
+import api from './axios';
 
-export const integrantesApi = {
-  getAll: async (params) => {
-    const response = await apiClient.get('/integrantes', { params });
-    return response.data;
-  },
+export const getAll = async (params) => {
+  const { data } = await api.get('/api/integrantes/', { params });
+  return data;
+};
 
-  getById: async (id) => {
-    const response = await apiClient.get(`/integrantes/${id}`);
-    return response.data;
-  },
+export const getById = async (id) => {
+  const { data } = await api.get(`/api/integrantes/${id}/`);
+  return data;
+};
 
-  create: async (data) => {
-    const response = await apiClient.post('/integrantes', data);
-    return response.data;
-  },
+export const create = async (payload) => {
+  const { data } = await api.post('/api/integrantes/', payload);
+  return data;
+};
 
-  update: async (id, data) => {
-    const response = await apiClient.put(`/integrantes/${id}`, data);
-    return response.data;
-  },
+export const update = async (id, payload) => {
+  const { data } = await api.put(`/api/integrantes/${id}/`, payload);
+  return data;
+};
 
-  desactivar: async (id) => {
-    const response = await apiClient.put(`/integrantes/${id}/desactivar`);
-    return response.data;
-  },
+export const patch = async (id, payload) => {
+  const { data } = await api.patch(`/api/integrantes/${id}/`, payload);
+  return data;
+};
 
-  activar: async (id) => {
-    const response = await apiClient.put(`/integrantes/${id}/activar`);
-    return response.data;
-  },
+export const remove = async (id) => {
+  const { data } = await api.delete(`/api/integrantes/${id}/`);
+  return data;
+};
+
+export const cambiarEstado = async (id, payload) => {
+  const { data } = await api.patch(`/api/integrantes/${id}/cambiar_estado/`, payload);
+  return data;
+};
+
+export const getMe = async () => {
+  const { data } = await api.get('/api/integrantes/me/');
+  return data;
 };

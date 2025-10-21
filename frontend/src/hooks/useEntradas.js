@@ -1,76 +1,77 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { entradasApi } from '../api/entradas.js';
+import * as entradasAPI from '../api/entradas';
 
-export const usePedidosEntradas = (params = {}) =>
-  useQuery({
-    queryKey: ['entradas', 'pedidos', params],
-    queryFn: () => entradasApi.getPedidos(params),
-    keepPreviousData: true,
+export const useEntradas = (filters) => {
+  const queryClient = useQueryClient();
+
+  const entradasQuery = useQuery({
+    queryKey: ['entradas', filters],
+    queryFn: () => entradasAPI.getAll(filters),
   });
 
-export const usePedidoEntrada = (id) =>
+  const createMutation = useMutation({
+    mutationFn: entradasAPI.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entradas'] });
+      toast.success('Solicitud enviada');
+    },
+    onError: () => toast.error('Error al enviar la solicitud'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data, method = 'put' }) =>
+      method === 'patch' ? entradasAPI.patch(id, data) : entradasAPI.update(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['entradas'] });
+      queryClient.invalidateQueries({ queryKey: ['entrada', variables.id] });
+      toast.success('Solicitud actualizada');
+    },
+    onError: () => toast.error('No se pudo actualizar la solicitud'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: entradasAPI.remove,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entradas'] });
+      toast.success('Solicitud eliminada');
+    },
+    onError: () => toast.error('No se pudo eliminar la solicitud'),
+  });
+
+  const aprobarMutation = useMutation({
+    mutationFn: ({ id, data }) => entradasAPI.aprobar(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entradas'] });
+      toast.success('Solicitud aprobada');
+    },
+    onError: () => toast.error('No se pudo aprobar la solicitud'),
+  });
+
+  const rechazarMutation = useMutation({
+    mutationFn: ({ id, data }) => entradasAPI.rechazar(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entradas'] });
+      toast.success('Solicitud rechazada');
+    },
+    onError: () => toast.error('No se pudo rechazar la solicitud'),
+  });
+
+  return {
+    entradas: entradasQuery.data?.results || [],
+    meta: entradasQuery.data?.meta,
+    isLoading: entradasQuery.isLoading,
+    createEntrada: createMutation.mutate,
+    updateEntrada: updateMutation.mutate,
+    deleteEntrada: deleteMutation.mutate,
+    aprobarEntrada: aprobarMutation.mutate,
+    rechazarEntrada: rechazarMutation.mutate,
+  };
+};
+
+export const useEntrada = (id) =>
   useQuery({
-    queryKey: ['entradas', 'pedidos', id],
-    queryFn: () => entradasApi.getPedidoById(id),
+    queryKey: ['entrada', id],
+    queryFn: () => entradasAPI.getById(id),
     enabled: Boolean(id),
   });
-
-export const useFixture = (params = {}) =>
-  useQuery({
-    queryKey: ['entradas', 'fixture', params],
-    queryFn: () => entradasApi.getFixture(params),
-  });
-
-export const useCrearPedidoEntrada = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: entradasApi.createPedido,
-    onSuccess: () => {
-      toast.success('Solicitud enviada');
-      queryClient.invalidateQueries({ queryKey: ['entradas', 'pedidos'] });
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'No se pudo enviar la solicitud');
-    },
-  });
-};
-
-export const useActualizarPedidoEntrada = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }) => entradasApi.updatePedido(id, data),
-    onSuccess: (_, variables) => {
-      toast.success('Solicitud actualizada');
-      queryClient.invalidateQueries({ queryKey: ['entradas', 'pedidos', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['entradas', 'pedidos'] });
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'No se pudo actualizar la solicitud');
-    },
-  });
-};
-
-export const useGestionPedidoEntrada = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, action }) => {
-      if (action === 'aprobar') return entradasApi.aprobarPedido(id);
-      if (action === 'rechazar') return entradasApi.rechazarPedido(id);
-      throw new Error('Acción inválida');
-    },
-    onSuccess: (_, variables) => {
-      toast.success(
-        variables.action === 'aprobar' ? 'Pedido aprobado' : 'Pedido rechazado'
-      );
-      queryClient.invalidateQueries({ queryKey: ['entradas', 'pedidos'] });
-      queryClient.invalidateQueries({ queryKey: ['entradas', 'pedidos', variables.id] });
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'No se pudo actualizar el pedido');
-    },
-  });
-};

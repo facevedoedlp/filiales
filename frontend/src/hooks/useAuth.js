@@ -1,59 +1,61 @@
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore.js';
-import api from '../api/client.js';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import * as authAPI from '../api/auth';
+import { useAuthStore } from '../store/authStore';
 
-const useAuth = () => {
-  const navigate = useNavigate();
-  const { token, user, setCredentials, clear } = useAuthStore();
+export const useAuth = () => {
+  const queryClient = useQueryClient();
+  const { setUser, logout: logoutStore, user } = useAuthStore();
 
-  const login = async (credentials) => {
-    try {
-      console.log('🔐 Intentando login...');
-      console.log('📍 API Base URL:', api.defaults.baseURL);
-      console.log('📧 Email:', credentials.correo);
-      
-      const { data } = await api.post('/auth/login', credentials);
-      
-      console.log('✅ Respuesta del servidor:', data);
-      
-      if (data.success && data.data) {
-        setCredentials(data.data.token, data.data.usuario);
-        toast.success('Bienvenido nuevamente');
-        navigate('/');
-      } else {
-        throw new Error('Respuesta inválida del servidor');
+  const loginMutation = useMutation({
+    mutationFn: authAPI.login,
+    onMutate: () => {
+      toast.loading('Ingresando...', { id: 'auth-login' });
+    },
+    onSuccess: async (data) => {
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+      try {
+        const currentUser = await authAPI.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.error('No se pudo obtener el usuario actual', error);
       }
-    } catch (error) {
-      console.error('❌ Error completo:', error);
-      console.error('❌ URL intentada:', error.config?.url);
-      console.error('❌ Base URL:', error.config?.baseURL);
-      console.error('❌ Respuesta:', error.response);
-      
-      if (error.response?.status === 404) {
-        toast.error('❌ Endpoint no encontrado. Verifica que el backend esté corriendo en puerto 3000');
-      } else if (error.response?.data?.error) {
-        toast.error(error.response.data.error);
-      } else {
-        toast.error('No se pudo iniciar sesión');
-      }
-      throw error;
-    }
-  };
+      toast.success('Bienvenido nuevamente', { id: 'auth-login' });
+      queryClient.invalidateQueries(['me']);
+    },
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'Credenciales inválidas';
+      toast.error(message, { id: 'auth-login' });
+    },
+  });
 
-  const logout = () => {
-    clear();
-    toast.success('Sesión cerrada');
-    navigate('/login');
-  };
+  const logoutMutation = useMutation({
+    mutationFn: authAPI.logout,
+    onSettled: () => {
+      logoutStore();
+      queryClient.clear();
+      toast.success('Sesión finalizada');
+    },
+  });
+
+  const meQuery = useQuery({
+    queryKey: ['me'],
+    queryFn: authAPI.getCurrentUser,
+    enabled: Boolean(localStorage.getItem('access_token')),
+    onSuccess: (data) => {
+      setUser(data);
+    },
+    onError: () => {
+      logoutStore();
+    },
+  });
 
   return {
-    token,
-    user,
-    login,
-    logout,
-    isAuthenticated: Boolean(token),
+    user: meQuery.data || user,
+    isLoading: meQuery.isLoading,
+    login: loginMutation.mutate,
+    logout: () => logoutMutation.mutate(),
+    isLoggingOut: logoutMutation.isLoading,
   };
 };
-
-export default useAuth;

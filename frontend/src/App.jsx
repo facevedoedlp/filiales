@@ -1,38 +1,47 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-
-
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import Layout from './components/layout/Layout';
-import FilialList from './pages/Filiales/FilialList.jsx';
-import FilialForm from './pages/Filiales/FilialForm.jsx';
-import FilialDetail from './pages/Filiales/FilialDetail.jsx';
-import FilialRenovar from './pages/Filiales/FilialRenovar.jsx';
-import IntegranteList from './pages/Integrantes/IntegranteList.jsx';
-import IntegranteForm from './pages/Integrantes/IntegranteForm.jsx';
-import IntegranteDetail from './pages/Integrantes/IntegranteDetail.jsx';
-import AccionList from './pages/Acciones/AccionList.jsx';
-import AccionForm from './pages/Acciones/AccionForm.jsx';
-import AccionDetail from './pages/Acciones/AccionDetail.jsx';
-import EntradasList from './pages/Entradas/EntradasList.jsx';
-import EntradasForm from './pages/Entradas/EntradasForm.jsx';
-import EntradasApproval from './pages/Entradas/EntradasApproval.jsx';
-import ForoHome from './pages/Foro/ForoHome.jsx';
-import ForoTemaForm from './pages/Foro/ForoTemaForm.jsx';
-import ForoTemaDetail from './pages/Foro/ForoTemaDetail.jsx';
-import NotificacionList from './pages/Notificaciones/NotificacionList.jsx';
+import FilialesList from './pages/Filiales/FilialesList';
+import FilialesMap from './pages/Filiales/FilialesMap';
+import FilialDetailPage from './pages/Filiales/FilialDetailPage';
+import IntegrantesList from './pages/Integrantes/IntegrantesList';
+import IntegranteDetailPage from './pages/Integrantes/IntegranteDetailPage';
+import AccionesList from './pages/Acciones/AccionesList';
+import AccionNew from './pages/Acciones/AccionNew';
+import AccionDetailPage from './pages/Acciones/AccionDetailPage';
+import EntradasList from './pages/Entradas/EntradasList';
+import EntradaNew from './pages/Entradas/EntradaNew';
+import EntradasApproval from './pages/Entradas/EntradasApproval';
+import ForoHome from './pages/Foro/ForoHome';
+import CategoriaPage from './pages/Foro/CategoriaPage';
+import HiloPage from './pages/Foro/HiloPage';
+import HiloNew from './pages/Foro/HiloNew';
+import Perfil from './pages/Perfil';
+import { Layout } from './components/layout/Layout';
+import { useAuthStore } from './store/authStore';
+import { ROLES } from './utils/constants';
 
-function App() {
+const ProtectedRoute = ({ children, requiredRole }) => {
+  const { isAuthenticated, user } = useAuthStore();
 
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requiredRole && user?.rol !== requiredRole) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children || <Outlet />;
+};
+
+const App = () => {
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
         <Route path="/login" element={<Login />} />
-
         <Route
           path="/"
           element={
@@ -41,50 +50,53 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
-
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="filiales">
-            <Route index element={<FilialList />} />
-            <Route path="nueva" element={<FilialForm />} />
-            <Route path=":id" element={<FilialDetail />} />
-            <Route path=":id/editar" element={<FilialForm />} />
-            <Route path=":id/renovar" element={<FilialRenovar />} />
+            <Route index element={<FilialesList />} />
+            <Route path="mapa" element={<FilialesMap />} />
+            <Route path=":id" element={<FilialDetailPage />} />
           </Route>
-
           <Route path="integrantes">
-            <Route index element={<IntegranteList />} />
-            <Route path="nuevo" element={<IntegranteForm />} />
-            <Route path=":id" element={<IntegranteDetail />} />
-            <Route path=":id/editar" element={<IntegranteForm />} />
+            <Route index element={<IntegrantesList />} />
+            <Route path=":id" element={<IntegranteDetailPage />} />
           </Route>
-
           <Route path="acciones">
-            <Route index element={<AccionList />} />
-            <Route path="nueva" element={<AccionForm />} />
-            <Route path=":id" element={<AccionDetail />} />
-            <Route path=":id/editar" element={<AccionForm />} />
+            <Route index element={<AccionesList />} />
+            <Route
+              path="nueva"
+              element={
+                <ProtectedRoute requiredRole={ROLES.ADMIN}>
+                  <AccionNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route path=":id" element={<AccionDetailPage />} />
           </Route>
-
           <Route path="entradas">
             <Route index element={<EntradasList />} />
-            <Route path="solicitar" element={<EntradasForm />} />
-            <Route path="gestionar" element={<EntradasApproval />} />
+            <Route path="nueva" element={<EntradaNew />} />
+            <Route
+              path="aprobar"
+              element={
+                <ProtectedRoute requiredRole={ROLES.ADMIN}>
+                  <EntradasApproval />
+                </ProtectedRoute>
+              }
+            />
           </Route>
-
           <Route path="foro">
             <Route index element={<ForoHome />} />
-            <Route path="nuevo" element={<ForoTemaForm />} />
-            <Route path="tema/:id" element={<ForoTemaDetail />} />
-            <Route path="tema/:id/editar" element={<ForoTemaForm />} />
+            <Route path="categoria/:slug" element={<CategoriaPage />} />
+            <Route path="hilo/:id" element={<HiloPage />} />
+            <Route path="nuevo" element={<HiloNew />} />
           </Route>
-
-          <Route path="notificaciones" element={<NotificacionList />} />
+          <Route path="perfil" element={<Perfil />} />
         </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );
-}
+};
 
 export default App;

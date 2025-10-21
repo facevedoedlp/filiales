@@ -1,112 +1,98 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { MessageSquare } from 'lucide-react';
-import {
-  useCategoriasForo,
-  useEtiquetasForo,
-  useTemas,
-} from '../../hooks/useForo.js';
-import SearchBar from '../../components/common/SearchBar.jsx';
-import Select from '../../components/common/Select.jsx';
-import Pagination from '../../components/common/Pagination.jsx';
-import Button from '../../components/common/Button.jsx';
-import Loading from '../../components/common/Loading.jsx';
-import EmptyState from '../../components/common/EmptyState.jsx';
-import ForoTemaCard from '../../components/foro/ForoTemaCard.jsx';
-import ForoCategories from '../../components/foro/ForoCategories.jsx';
-
-const ordenOptions = [
-  { value: 'recientes', label: 'Recientes' },
-  { value: 'populares', label: 'Populares' },
-  { value: 'mas-respondidos', label: 'Más respondidos' },
-];
+import { useCategorias, useHilos } from '../../hooks/useForo';
+import CategoriaList from '../../components/foro/CategoriaList';
+import HiloCard from '../../components/foro/HiloCard';
+import { Modal } from '../../components/common/Modal';
+import { useForm } from 'react-hook-form';
+import Input from '../../components/common/Input';
+import { Button } from '../../components/common/Button';
+import { composeValidators, required } from '../../utils/validators';
+import Spinner from '../../components/common/Spinner';
 
 const ForoHome = () => {
-  const navigate = useNavigate();
-  const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({ categoria: null, etiqueta: null, orden: 'recientes', busqueda: '' });
-  const queryFilters = { ...filters };
-  Object.keys(queryFilters).forEach((key) => {
-    if (!queryFilters[key]) {
-      delete queryFilters[key];
-    }
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { categorias, isLoading: isLoadingCategorias, createCategoria } = useCategorias();
+  const { hilos, isLoading: isLoadingHilos } = useHilos({ limit: 6 });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    defaultValues: {
+      nombre: '',
+      descripcion: '',
+    },
   });
-  const { data: temasData, isLoading } = useTemas({ page, limit: 10, ...queryFilters });
-  const { data: categoriasData } = useCategoriasForo();
-  const { data: etiquetasData } = useEtiquetasForo();
 
-  const temas = temasData?.data?.items || [];
-  const pagination = temasData?.data?.pagination;
+  const onSubmit = (values) => {
+    createCategoria(values, {
+      onSuccess: () => {
+        reset();
+        setIsModalOpen(false);
+      },
+    });
+  };
 
   return (
-    <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:flex-row md:items-center md:justify-between">
-          <SearchBar
-            placeholder="Buscar temas o palabras clave"
-            onSearch={(value) => {
-              setFilters((prev) => ({ ...prev, busqueda: value }));
-              setPage(1);
-            }}
-            className="md:flex-1"
-          />
-          <Select
-            label="Orden"
-            options={ordenOptions}
-            value={ordenOptions.find((option) => option.value === filters.orden)}
-            onChange={(option) => {
-              setFilters((prev) => ({ ...prev, orden: option.value }));
-              setPage(1);
-            }}
-          />
-          <Link to="/foro/nuevo">
-            <Button>Nuevo tema</Button>
-          </Link>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Foro institucional</h1>
+          <p className="text-sm text-slate-500">Comparte novedades y debates entre filiales.</p>
         </div>
+        <Button onClick={() => setIsModalOpen(true)}>Nueva categoría</Button>
+      </div>
 
-        {isLoading ? (
-          <Loading message="Cargando temas" />
-        ) : temas.length === 0 ? (
-          <EmptyState
-            icon={MessageSquare}
-            title="Aún no hay temas"
-            description="Sé el primero en iniciar una conversación en el foro."
-            actionLabel="Crear tema"
-            onAction={() => navigate('/foro/nuevo')}
-          />
+      {isLoadingCategorias ? (
+        <div className="flex justify-center py-10">
+          <Spinner />
+        </div>
+      ) : (
+        <CategoriaList categorias={categorias} onCreate={() => setIsModalOpen(true)} />
+      )}
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">Hilos recientes</h2>
+        </div>
+        {isLoadingHilos ? (
+          <div className="flex justify-center py-10">
+            <Spinner />
+          </div>
         ) : (
-          <div className="space-y-4">
-            {temas.map((tema) => (
-              <ForoTemaCard key={tema.id} tema={tema} />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {hilos.map((hilo) => (
+              <HiloCard key={hilo.id} hilo={hilo} />
             ))}
+            {hilos.length === 0 && <p className="col-span-full text-sm text-slate-500">No hay hilos aún.</p>}
           </div>
         )}
+      </div>
 
-        {pagination ? (
-          <Pagination
-            page={pagination.page}
-            totalPages={pagination.totalPages}
-            total={pagination.total}
-            onPageChange={setPage}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nueva categoría">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Input
+            label="Nombre"
+            error={errors.nombre?.message}
+            {...register('nombre', composeValidators(required()))}
           />
-        ) : null}
-      </div>
-
-      <div className="space-y-4">
-        <ForoCategories
-          categorias={categoriasData?.data || []}
-          etiquetas={etiquetasData?.data || []}
-          onSelectCategoria={(categoria) => {
-            setFilters((prev) => ({ ...prev, categoria }));
-            setPage(1);
-          }}
-          onSelectEtiqueta={(etiqueta) => {
-            setFilters((prev) => ({ ...prev, etiqueta }));
-            setPage(1);
-          }}
-          selectedCategoria={filters.categoria}
-        />
-      </div>
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+            Descripción
+            <textarea
+              rows={4}
+              className={`w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                errors.descripcion ? 'border-red-500' : ''
+              }`}
+              {...register('descripcion', composeValidators(required()))}
+            />
+            {errors.descripcion && <span className="text-xs text-red-600">{errors.descripcion.message}</span>}
+          </label>
+          <div className="flex justify-end">
+            <Button type="submit">Crear categoría</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

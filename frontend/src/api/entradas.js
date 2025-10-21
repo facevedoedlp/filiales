@@ -1,38 +1,41 @@
-import apiClient from './client.js';
+import api from './axios';
 
-export const entradasApi = {
-  getPedidos: async (params) => {
-    const response = await apiClient.get('/entradas/pedidos', { params });
-    return response.data;
-  },
+export const getAll = async (params) => {
+  const { data } = await api.get('/api/entradas/', { params });
+  return data;
+};
 
-  getPedidoById: async (id) => {
-    const response = await apiClient.get(`/entradas/pedidos/${id}`);
-    return response.data;
-  },
+export const getById = async (id) => {
+  const { data } = await api.get(`/api/entradas/${id}/`);
+  return data;
+};
 
-  createPedido: async (data) => {
-    const response = await apiClient.post('/entradas/pedidos', data);
-    return response.data;
-  },
+export const create = async (payload) => {
+  const { data } = await api.post('/api/entradas/', payload);
+  return data;
+};
 
-  updatePedido: async (id, data) => {
-    const response = await apiClient.put(`/entradas/pedidos/${id}`, data);
-    return response.data;
-  },
+export const update = async (id, payload) => {
+  const { data } = await api.put(`/api/entradas/${id}/`, payload);
+  return data;
+};
 
-  aprobarPedido: async (id) => {
-    const response = await apiClient.put(`/entradas/pedidos/${id}/aprobar`);
-    return response.data;
-  },
+export const patch = async (id, payload) => {
+  const { data } = await api.patch(`/api/entradas/${id}/`, payload);
+  return data;
+};
 
-  rechazarPedido: async (id) => {
-    const response = await apiClient.put(`/entradas/pedidos/${id}/rechazar`);
-    return response.data;
-  },
+export const remove = async (id) => {
+  const { data } = await api.delete(`/api/entradas/${id}/`);
+  return data;
+};
 
-  getFixture: async (params) => {
-    const response = await apiClient.get('/entradas/fixture', { params });
-    return response.data;
-  },
+export const aprobar = async (id, payload) => {
+  const { data } = await api.patch(`/api/entradas/${id}/aprobar/`, payload);
+  return data;
+};
+
+export const rechazar = async (id, payload) => {
+  const { data } = await api.patch(`/api/entradas/${id}/rechazar/`, payload);
+  return data;
 };

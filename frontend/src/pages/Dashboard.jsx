@@ -1,218 +1,83 @@
-import { Link } from 'react-router-dom';
-import { CalendarClock, Flag, MessageSquare, Ticket, Users } from 'lucide-react';
-import { useFiliales } from '../hooks/useFiliales.js';
-import { useAcciones } from '../hooks/useAcciones.js';
-import { usePedidosEntradas, useFixture } from '../hooks/useEntradas.js';
-import { useTemas } from '../hooks/useForo.js';
-import { useNotificaciones } from '../hooks/useNotificaciones.js';
-import Loading from '../components/common/Loading.jsx';
-import Badge from '../components/common/Badge.jsx';
+import { Users, Building2, Activity, Ticket } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useDashboard, useDashboardFilial } from '../hooks/useDashboard';
+import StatsCard from '../components/dashboard/StatsCard';
+import ChartAcciones from '../components/dashboard/ChartAcciones';
+import ChartEntradas from '../components/dashboard/ChartEntradas';
+import ResumenGeneral from '../components/dashboard/ResumenGeneral';
+import Spinner from '../components/common/Spinner';
+import { ROLES } from '../utils/constants';
 
 const Dashboard = () => {
-  const { data: filialesData, isLoading: loadingFiliales } = useFiliales({ 
-    page: 1, 
-    limit: 200, 
-    esActiva: true 
-  });
-  const { data: accionesData, isLoading: loadingAcciones } = useAcciones({ page: 1, limit: 5 });
-  const { data: pedidosData } = usePedidosEntradas({ page: 1, limit: 5, aprobacionSocios: 'PENDIENTE' });
-  const { data: fixtureData } = useFixture({ proximos: true, limit: 5 });
-  const { data: temasData } = useTemas({ page: 1, limit: 5, orden: 'recientes' });
-  const { data: notificacionesData } = useNotificaciones({ leida: false, limit: 5 });
-
-  const acciones = accionesData?.data?.acciones ?? accionesData?.data?.items ?? [];
-  const temas = temasData?.data?.temas ?? temasData?.data?.items ?? [];
-  const fixture = fixtureData?.data ?? fixtureData?.data?.items ?? [];
-  const notificaciones = notificacionesData?.data?.items ?? notificacionesData?.data ?? [];
-
-  const filialesTotal = filialesData?.data?.pagination?.total ?? 0;
-
-  const integrantesTotal = filialesData?.data?.filiales?.reduce((sum, filial) => {
-    return sum + (filial.totalIntegrantes || 0);
-  }, 0) ?? 0;
-
-  const accionesResumen = accionesData?.data?.items ?? accionesData?.data?.acciones ?? [];
-
-  const accionesMes = accionesResumen.filter((accion) => {
-    const fecha = new Date(accion.fechaRealizacion || accion.fecha || accion.fecha_realizacion);
-    const hoy = new Date();
-    return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear();
-  }).length;
-
-  const pedidosPendientes = pedidosData?.data?.pagination?.total ?? 0;
-
-  const isLoading = loadingFiliales || loadingAcciones;
+  const { user } = useAuth();
+  const { general, accionesStats, entradasStats, resumen, isLoading } = useDashboard();
+  const filialQuery = useDashboardFilial(user?.filial_id);
 
   if (isLoading) {
-    return <Loading message="Preparando tu tablero..." />;
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
+  const stats = [
+    {
+      title: 'Filiales activas',
+      value: general?.filiales_activas,
+      icon: <Building2 className="h-6 w-6" />,
+    },
+    {
+      title: 'Integrantes',
+      value: general?.integrantes,
+      icon: <Users className="h-6 w-6" />,
+    },
+    {
+      title: 'Acciones en curso',
+      value: general?.acciones_en_curso,
+      icon: <Activity className="h-6 w-6" />,
+    },
+    {
+      title: 'Entradas pendientes',
+      value: general?.entradas_pendientes,
+      icon: <Ticket className="h-6 w-6" />,
+    },
+  ];
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Resumen general de la actividad de las filiales, pedidos y novedades.
-        </p>
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((item) => (
+          <StatsCard key={item.title} {...item} />
+        ))}
       </div>
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <SummaryCard
-          icon={Users}
-          title="Filiales activas"
-          value={filialesTotal.toLocaleString('es-AR')}
-          subtitle="Filiales en funcionamiento"
-        />
-        <SummaryCard
-          icon={Flag}
-          title="Integrantes activos"
-          value={integrantesTotal.toLocaleString('es-AR')}
-          subtitle="Total de integrantes registrados"
-        />
-        <SummaryCard
-          icon={MessageSquare}
-          title="Acciones este mes"
-          value={accionesMes.toLocaleString('es-AR')}
-          subtitle="Acciones registradas"
-        />
-        <SummaryCard
-          icon={Ticket}
-          title="Pedidos pendientes"
-          value={pedidosPendientes.toLocaleString('es-AR')}
-          subtitle="Entradas por aprobar"
-        />
-      </section>
+      {user?.rol === ROLES.PRESIDENTE && filialQuery.data && (
+        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-slate-900">Mi filial</h3>
+          <p className="mt-2 text-sm text-slate-600">
+            Integrantes: {filialQuery.data.integrantes} · Acciones: {filialQuery.data.acciones}
+          </p>
+        </div>
+      )}
 
-      <section className="grid gap-6 md:grid-cols-2">
-        <Card title="Últimas acciones" linkLabel="Ver todas" linkTo="/acciones">
-          {acciones.length ? (
-            <ul className="space-y-3 text-sm text-slate-600">
-              {acciones.slice(0, 5).map((accion) => (
-                <li
-                  key={accion.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
-                >
-                  <div>
-                    <p className="font-semibold text-slate-800">
-                      {accion.descripcion || accion.titulo || 'Sin título'}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {new Intl.DateTimeFormat('es-AR', { dateStyle: 'short' }).format(
-                        new Date(accion.fecha_realizacion ?? accion.fechaRealizacion ?? accion.fecha)
-                      )}{' '}
-                      · {accion.filial?.nombre || accion.filial_nombre || accion.filialNombre || 'Sin filial'}
-                    </p>
-                  </div>
-                  <Badge variant="info">{accion.tipo || 'Acción'}</Badge>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyContent message="Todavía no se registraron acciones." />
-          )}
-        </Card>
+      {user?.rol === ROLES.INTEGRANTE && (
+        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-slate-900">Mi actividad</h3>
+          <p className="mt-2 text-sm text-slate-600">
+            Acciones realizadas: {general?.mis_acciones} · Participaciones en foro: {general?.mis_respuestas}
+          </p>
+        </div>
+      )}
 
-        <Card title="Últimos temas del foro" linkLabel="Ir al foro" linkTo="/foro">
-          {temas.length ? (
-            <ul className="space-y-3 text-sm text-slate-600">
-              {temas.slice(0, 5).map((tema) => (
-                <li
-                  key={tema.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
-                >
-                  <div>
-                    <p className="font-semibold text-slate-800">{tema.titulo}</p>
-                    <p className="text-xs text-slate-500">
-                      {tema.usuario?.nombre || tema.autor_nombre || tema.autorNombre}
-                    </p>
-                  </div>
-                  <Badge variant="neutral">
-                    {tema._count?.respuestas ?? tema.total_respuestas ?? tema.totalRespuestas ?? 0} respuestas
-                  </Badge>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyContent message="Aún no hay conversaciones." />
-          )}
-        </Card>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ChartAcciones data={accionesStats?.detalle || []} />
+        <ChartEntradas data={entradasStats?.detalle || []} />
+      </div>
 
-        <Card title="Notificaciones recientes" linkLabel="Ver todas" linkTo="/notificaciones">
-          {notificaciones.length ? (
-            <ul className="space-y-3 text-sm text-slate-600">
-              {notificaciones.slice(0, 5).map((notificacion) => (
-                <li key={notificacion.id} className="rounded-xl border border-slate-100 p-3">
-                  <p className="font-semibold text-slate-800">{notificacion.titulo}</p>
-                  <p className="text-xs text-slate-500">{notificacion.mensaje}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyContent message="No hay notificaciones nuevas." />
-          )}
-        </Card>
-
-        <Card title="Próximos partidos" linkLabel="Ver solicitudes" linkTo="/entradas">
-          {fixture.length ? (
-            <ul className="space-y-3 text-sm text-slate-600">
-              {fixture.map((fixtureItem) => (
-                <li
-                  key={fixtureItem.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
-                >
-                  <div>
-                    <p className="font-semibold text-slate-800">{fixtureItem.rival}</p>
-                    <p className="text-xs text-slate-500">
-                      {new Intl.DateTimeFormat('es-AR', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      }).format(new Date(fixtureItem.fecha))}
-                    </p>
-                  </div>
-                  <CalendarClock className="h-5 w-5 text-red-600" />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyContent message="No hay partidos próximos." />
-          )}
-        </Card>
-      </section>
+      <ResumenGeneral resumen={resumen} />
     </div>
   );
 };
-
-const SummaryCard = ({ icon: Icon, title, value, subtitle }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <div className="flex items-center gap-3">
-      <div className="rounded-full bg-red-100 p-3 text-red-600">
-        <Icon className="h-6 w-6" />
-      </div>
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-400">{title}</p>
-        <p className="text-2xl font-bold text-slate-900">{value}</p>
-        <p className="text-xs text-slate-500">{subtitle}</p>
-      </div>
-    </div>
-  </div>
-);
-
-const Card = ({ title, children, linkLabel, linkTo }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-6">
-    <div className="mb-4 flex items-center justify-between">
-      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-      <Link to={linkTo} className="text-sm font-medium text-red-600 hover:underline">
-        {linkLabel}
-      </Link>
-    </div>
-    <div>{children}</div>
-  </div>
-);
-
-const EmptyContent = ({ message }) => (
-  <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500">
-    {message}
-  </p>
-);
 
 export default Dashboard;

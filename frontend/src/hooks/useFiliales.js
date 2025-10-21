@@ -1,87 +1,66 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { filialesApi } from '../api/filiales.js'; // ✅ RUTA CORRECTA
+import * as filialesAPI from '../api/filiales';
 
-export const useFiliales = (params = {}) =>
-  useQuery({
-    queryKey: ['filiales', params],
-    queryFn: () => filialesApi.getAll(params),
-    staleTime: 5 * 60 * 1000,
-    keepPreviousData: true,
-  });
-
-export const useFilial = (id) =>
-  useQuery({
-    queryKey: ['filial', id],
-    queryFn: () => filialesApi.getById(id),
-    enabled: Boolean(id),
-  });
-
-export const useFilialEstadisticas = (id) =>
-  useQuery({
-    queryKey: ['filial', id, 'estadisticas'],
-    queryFn: () => filialesApi.getEstadisticas(id),
-    enabled: Boolean(id),
-    staleTime: 5 * 60 * 1000,
-  });
-
-export const useCreateFilial = () => {
+export const useFiliales = (filters) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: filialesApi.create,
+  const filialesQuery = useQuery({
+    queryKey: ['filiales', filters],
+    queryFn: () => filialesAPI.getAll(filters),
+  });
+
+  const mapaQuery = useQuery({
+    queryKey: ['filiales', 'mapa'],
+    queryFn: filialesAPI.getMapa,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: filialesAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['filiales'] });
       toast.success('Filial creada exitosamente');
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al crear filial');
-    },
+    onError: () => toast.error('Error al crear filial'),
   });
-};
 
-export const useUpdateFilial = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }) => filialesApi.update(id, data),
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data, isPatch }) =>
+      isPatch ? filialesAPI.patch(id, data) : filialesAPI.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['filiales'] });
       queryClient.invalidateQueries({ queryKey: ['filial', variables.id] });
-      toast.success('Filial actualizada exitosamente');
+      toast.success('Filial actualizada');
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al actualizar filial');
-    },
+    onError: () => toast.error('Error al actualizar filial'),
   });
-};
 
-export const useDeleteFilial = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: filialesApi.delete,
+  const deleteMutation = useMutation({
+    mutationFn: filialesAPI.remove,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['filiales'] });
-      toast.success('Filial desactivada');
+      toast.success('Filial eliminada');
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al desactivar filial');
-    },
+    onError: () => toast.error('No se pudo eliminar la filial'),
   });
+
+  return {
+    filiales: filialesQuery.data?.results || [],
+    meta: filialesQuery.data?.meta,
+    isLoading: filialesQuery.isLoading,
+    error: filialesQuery.error,
+    mapaData: mapaQuery.data || [],
+    isMapaLoading: mapaQuery.isLoading,
+    createFilial: createMutation.mutate,
+    updateFilial: updateMutation.mutate,
+    deleteFilial: deleteMutation.mutate,
+  };
 };
 
-export const useRenovarFilial = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }) => filialesApi.renovar(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['filial', variables.id] });
-      toast.success('Autoridades renovadas exitosamente');
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Error al renovar autoridades');
-    },
+export const useFilial = (id) => {
+  return useQuery({
+    queryKey: ['filial', id],
+    queryFn: () => filialesAPI.getById(id),
+    enabled: Boolean(id),
   });
 };

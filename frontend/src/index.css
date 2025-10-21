@@ -2,75 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
+:root {
+  color-scheme: light;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
 }
 
-/* Estilos para React Select */
-.react-select-container {
-  width: 100%;
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-.react-select__control {
-  min-height: 42px !important;
-  border-radius: 0.5rem !important;
-  transition: all 0.2s ease-in-out;
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #f8fafc;
 }
 
-.react-select__control--is-focused {
-  border-color: #dc2626 !important;
-  box-shadow: 0 0 0 1px #dc2626 !important;
-}
-
-.react-select__menu {
-  border-radius: 0.5rem !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-  z-index: 9999 !important;
-}
-
-.react-select__option {
-  cursor: pointer !important;
-  transition: all 0.15s ease-in-out;
-}
-
-.react-select__option--is-focused {
-  background-color: #fee2e2 !important;
-}
-
-.react-select__option--is-selected {
-  background-color: #dc2626 !important;
-  color: white !important;
-}
-
-.react-select__placeholder {
-  color: #94a3b8 !important;
-}
-
-.react-select__single-value {
-  color: #0f172a !important;
-}
-
-.react-select__indicator-separator {
-  display: none;
-}
-
-.react-select__dropdown-indicator {
-  color: #64748b !important;
-}
-
-.react-select__dropdown-indicator:hover {
-  color: #dc2626 !important;
-}
-
-.react-select__clear-indicator {
-  color: #64748b !important;
-  cursor: pointer;
-}
-
-.react-select__clear-indicator:hover {
-  color: #dc2626 !important;
-}
-
-.react-select__loading-indicator {
-  color: #dc2626 !important;
+#root {
+  min-height: 100vh;
 }

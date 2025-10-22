@@ -27,6 +27,13 @@ class IntegranteSerializer(serializers.ModelSerializer):
             "is_active",
         ]
         read_only_fields = ("id", "fecha_ingreso")
+        extra_kwargs = {
+            'email': {'required': False},
+            'telefono': {'required': False},
+            'avatar': {'required': False},
+            'fecha_nacimiento': {'required': False},
+            'documento': {'required': False},
+        }
 
 
 class CambiarEstadoSerializer(serializers.ModelSerializer):

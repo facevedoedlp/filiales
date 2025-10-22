@@ -41,7 +41,14 @@ class SolicitudEntradaViewSet(FiltroPorFilialMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=["patch"], serializer_class=ResolverSolicitudSerializer)
     def aprobar(self, request, *args, **kwargs):
         solicitud = self.get_object()
-        serializer = self.get_serializer(solicitud, data={**request.data, "estado": SolicitudEntrada.Estado.APROBADA}, partial=True)
+        cantidad_aprobada = request.data.get("cantidad_aprobada", solicitud.cantidad_solicitada)
+        if cantidad_aprobada in (None, ""):
+            cantidad_aprobada = solicitud.cantidad_solicitada
+        data = {
+            "estado": SolicitudEntrada.Estado.APROBADA,
+            "cantidad_aprobada": cantidad_aprobada,
+        }
+        serializer = self.get_serializer(solicitud, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(SolicitudEntradaSerializer(solicitud).data)
@@ -49,7 +56,11 @@ class SolicitudEntradaViewSet(FiltroPorFilialMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=["patch"], serializer_class=ResolverSolicitudSerializer)
     def rechazar(self, request, *args, **kwargs):
         solicitud = self.get_object()
-        serializer = self.get_serializer(solicitud, data={**request.data, "estado": SolicitudEntrada.Estado.RECHAZADA}, partial=True)
+        data = {
+            "estado": SolicitudEntrada.Estado.RECHAZADA,
+            "cantidad_aprobada": 0,
+        }
+        serializer = self.get_serializer(solicitud, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(SolicitudEntradaSerializer(solicitud).data)

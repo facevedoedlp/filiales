@@ -1,4 +1,5 @@
 import api from './axios';
+import { normalizePaginatedResponse } from './utils';
 
 export const getCategorias = async () => {
   const { data } = await api.get('/api/foro/categorias/');
@@ -11,7 +12,8 @@ export const createCategoria = async (payload) => {
 };
 
 export const updateCategoria = async (slug, payload, method = 'put') => {
-  const { data } = await api[method](`/api/foro/categorias/${slug}/`, payload);
+  const requestMethod = method === 'patch' ? 'patch' : 'put';
+  const { data } = await api[requestMethod](`/api/foro/categorias/${slug}/`, payload);
   return data;
 };
 
@@ -20,9 +22,9 @@ export const deleteCategoria = async (slug) => {
   return data;
 };
 
-export const getHilos = async (params) => {
+export const getHilos = async (params = {}) => {
   const { data } = await api.get('/api/foro/hilos/', { params });
-  return data;
+  return normalizePaginatedResponse(data);
 };
 
 export const getHilo = async (id) => {
@@ -36,7 +38,8 @@ export const createHilo = async (payload) => {
 };
 
 export const updateHilo = async (id, payload, method = 'put') => {
-  const { data } = await api[method](`/api/foro/hilos/${id}/`, payload);
+  const requestMethod = method === 'patch' ? 'patch' : 'put';
+  const { data } = await api[requestMethod](`/api/foro/hilos/${id}/`, payload);
   return data;
 };
 
@@ -50,9 +53,9 @@ export const toggleHilo = async (id, payload) => {
   return data;
 };
 
-export const getRespuestas = async (params) => {
+export const getRespuestas = async (params = {}) => {
   const { data } = await api.get('/api/foro/respuestas/', { params });
-  return data;
+  return normalizePaginatedResponse(data);
 };
 
 export const createRespuesta = async (payload) => {
@@ -61,7 +64,8 @@ export const createRespuesta = async (payload) => {
 };
 
 export const updateRespuesta = async (id, payload, method = 'put') => {
-  const { data } = await api[method](`/api/foro/respuestas/${id}/`, payload);
+  const requestMethod = method === 'patch' ? 'patch' : 'put';
+  const { data } = await api[requestMethod](`/api/foro/respuestas/${id}/`, payload);
   return data;
 };
 

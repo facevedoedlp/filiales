@@ -5,8 +5,8 @@ export const getGeneral = async () => {
   return data;
 };
 
-export const getFilialStats = async (id) => {
-  const { data } = await api.get(`/api/dashboard/${id}/filial/`);
+export const getResumen = async () => {
+  const { data } = await api.get('/api/dashboard/resumen/');
   return data;
 };
 
@@ -20,7 +20,13 @@ export const getEntradasStats = async () => {
   return data;
 };
 
-export const getResumen = async () => {
-  const { data } = await api.get('/api/dashboard/resumen/');
-  return data;
+export const getDashboardData = async () => {
+  const [general, resumen, acciones, entradas] = await Promise.all([
+    getGeneral(),
+    getResumen(),
+    getAccionesStats(),
+    getEntradasStats(),
+  ]);
+
+  return { general, resumen, acciones, entradas };
 };

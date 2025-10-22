@@ -1,8 +1,9 @@
 import api from './axios';
+import { normalizePaginatedResponse } from './utils';
 
-export const getAll = async (params) => {
+export const getAll = async (params = {}) => {
   const { data } = await api.get('/api/entradas/', { params });
-  return data;
+  return normalizePaginatedResponse(data);
 };
 
 export const getById = async (id) => {

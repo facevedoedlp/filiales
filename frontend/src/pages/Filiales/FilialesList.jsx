@@ -1,91 +1,204 @@
-import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { Button } from '../../components/common/Button';
-import { Modal } from '../../components/common/Modal';
+import { useMemo, useState } from 'react';
+import { MapPin, Phone, Mail, Building } from 'lucide-react';
+import Button from '../../components/common/Button';
+import Card from '../../components/common/Card';
+import EmptyState from '../../components/common/EmptyState';
+import Input from '../../components/common/Input';
+import Modal from '../../components/common/Modal';
 import Spinner from '../../components/common/Spinner';
-import { FilialCard } from '../../components/filiales/FilialCard';
-import { FilialForm } from '../../components/filiales/FilialForm';
-import { useFiliales } from '../../hooks/useFiliales';
+import Badge from '../../components/common/Badge';
 import { useAuth } from '../../hooks/useAuth';
+import { useFiliales } from '../../hooks/useFiliales';
 import { ROLES } from '../../utils/constants';
+import { FilialForm } from '../../components/filiales/FilialForm';
 
 const FilialesList = () => {
-  const [filters, setFilters] = useState({ search: '' });
+  const { user } = useAuth();
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
   const [selectedFilial, setSelectedFilial] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { user } = useAuth();
-  const { filiales, isLoading, createFilial, updateFilial, deleteFilial } = useFiliales(filters);
 
-  const handleSubmit = (data) => {
+  const filters = useMemo(
+    () => ({
+      page,
+      search: search.trim() || undefined,
+    }),
+    [page, search]
+  );
+
+  const { data, isLoading, isError, error, createFilial, updateFilial, deleteFilial, pagination } = useFiliales(filters);
+
+  const filiales = data?.resultados || data?.results || [];
+  const total = pagination.count;
+  const pageSize = filters.page_size ?? 10;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const handleSubmit = async (values) => {
     if (selectedFilial) {
-      updateFilial({ id: selectedFilial.id, data });
+      await updateFilial({ id: selectedFilial.id, data: values });
     } else {
-      createFilial(data);
+      await createFilial(values);
     }
     setIsModalOpen(false);
     setSelectedFilial(null);
   };
 
-  const handleDelete = (id) => {
-    if (confirm('¿Desea eliminar la filial?')) {
-      deleteFilial(id);
-    }
+  const handleDelete = async (filialId) => {
+    const confirmed = window.confirm('¿Deseas eliminar esta filial?');
+    if (!confirmed) return;
+    await deleteFilial(filialId);
   };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedFilial(null);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[320px] items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <EmptyState
+        title="No pudimos cargar las filiales"
+        description={error?.message || 'Revisa tu conexión e intenta nuevamente.'}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Filiales</h1>
-          <p className="text-sm text-slate-500">Gestiona todas las filiales registradas en el sistema.</p>
+          <p className="text-sm text-slate-500">Consulta y gestiona las filiales registradas en el sistema.</p>
         </div>
         {user?.rol === ROLES.ADMIN && (
-          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsModalOpen(true)}>
-            Nueva filial
-          </Button>
+          <Button onClick={() => setIsModalOpen(true)}>Nueva filial</Button>
         )}
-      </div>
+      </header>
 
-      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-        <Search className="h-4 w-4 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Buscar por nombre o ciudad"
-          className="flex-1 border-none text-sm focus:outline-none"
-          value={filters.search}
-          onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Input
+          label="Buscar"
+          placeholder="Nombre, ciudad o país"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(1);
+          }}
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {isLoading ? (
-          <div className="col-span-full flex justify-center py-16">
-            <Spinner size="lg" />
+      {filiales.length === 0 ? (
+        <EmptyState
+          title="No encontramos filiales"
+          description="Prueba modificando los filtros o creando una nueva filial."
+          action=
+            {user?.rol === ROLES.ADMIN ? (
+              <Button onClick={() => setIsModalOpen(true)}>Registrar filial</Button>
+            ) : undefined}
+        />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filiales.map((filial) => (
+            <Card key={filial.id}>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-slate-500">#{filial.codigo || filial.id}</p>
+                    <h2 className="text-lg font-semibold text-slate-900">{filial.nombre}</h2>
+                    <p className="text-sm text-slate-500">{filial.ciudad && `${filial.ciudad}, ${filial.pais}`}</p>
+                  </div>
+                  <Badge variant={filial.activa === false ? 'warning' : 'default'}>
+                    {filial.activa === false ? 'Inactiva' : 'Activa'}
+                  </Badge>
+                </div>
+
+                {filial.direccion && (
+                  <p className="flex items-center gap-2 text-sm text-slate-600">
+                    <MapPin className="h-4 w-4 text-[#c41230]" />
+                    {filial.direccion}
+                  </p>
+                )}
+
+                {filial.telefono && (
+                  <p className="flex items-center gap-2 text-sm text-slate-600">
+                    <Phone className="h-4 w-4 text-[#c41230]" />
+                    {filial.telefono}
+                  </p>
+                )}
+
+                {filial.email && (
+                  <p className="flex items-center gap-2 text-sm text-slate-600">
+                    <Mail className="h-4 w-4 text-[#c41230]" />
+                    {filial.email}
+                  </p>
+                )}
+
+                <div className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  <p className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-[#c41230]" />
+                    Integrantes: {filial.total_integrantes ?? filial.integrantes ?? 0}
+                  </p>
+                  {filial.presidente && (
+                    <p className="mt-1 text-xs text-slate-500">Presidente: {filial.presidente}</p>
+                  )}
+                </div>
+
+                {user?.rol === ROLES.ADMIN && (
+                  <div className="flex items-center gap-2 pt-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedFilial(filial);
+                        setIsModalOpen(true);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(filial.id)}>
+                      Eliminar
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {filiales.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          <span>
+            Página {page} de {totalPages} · {total} filiales
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" disabled={page === 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
+              Anterior
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            >
+              Siguiente
+            </Button>
           </div>
-        ) : (
-          filiales.map((filial) => (
-            <FilialCard
-              key={filial.id}
-              filial={filial}
-              onEdit={(f) => {
-                setSelectedFilial(f);
-                setIsModalOpen(true);
-              }}
-              onDelete={user?.rol === ROLES.ADMIN ? handleDelete : undefined}
-            />
-          ))
-        )}
-        {!isLoading && filiales.length === 0 && (
-          <p className="col-span-full text-sm text-slate-500">No se encontraron filiales.</p>
-        )}
-      </div>
+        </div>
+      )}
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedFilial(null);
-        }}
+        onClose={closeModal}
         title={selectedFilial ? 'Editar filial' : 'Nueva filial'}
       >
         <FilialForm defaultValues={selectedFilial || {}} onSubmit={handleSubmit} />

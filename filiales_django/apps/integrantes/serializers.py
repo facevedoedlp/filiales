@@ -33,6 +33,7 @@ class IntegranteSerializer(serializers.ModelSerializer):
             'avatar': {'required': False},
             'fecha_nacimiento': {'required': False},
             'documento': {'required': False},
+
         }
 
 

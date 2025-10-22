@@ -31,11 +31,21 @@ class ResolverSolicitudSerializer(serializers.ModelSerializer):
     class Meta:
         model = SolicitudEntrada
         fields = ["cantidad_aprobada", "estado"]
+        extra_kwargs = {"cantidad_aprobada": {"required": False}}
 
     def validate(self, attrs):
         estado = attrs.get("estado")
-        cantidad_aprobada = attrs.get("cantidad_aprobada", 0)
-        if estado == SolicitudEntrada.Estado.APROBADA and cantidad_aprobada <= 0:
+        cantidad_aprobada = attrs.get("cantidad_aprobada")
+        if estado == SolicitudEntrada.Estado.APROBADA:
+            if cantidad_aprobada in (None, ""):
+                raise serializers.ValidationError(
+                    "Debe indicar una cantidad aprobada mayor a cero."
+                )
+            if cantidad_aprobada <= 0:
+                raise serializers.ValidationError(
+                    "Debe indicar una cantidad aprobada mayor a cero."
+                )
+        if cantidad_aprobada is not None and cantidad_aprobada < 0:
             raise serializers.ValidationError("Debe indicar una cantidad aprobada mayor a cero.")
         return attrs
 

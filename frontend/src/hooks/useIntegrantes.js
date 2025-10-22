@@ -2,21 +2,31 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as integrantesAPI from '../api/integrantes';
 
-export const useIntegrantes = (filters) => {
+const extractResults = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  return data.resultados || data.results || [];
+};
+
+export const useIntegrantes = (filters = {}) => {
   const queryClient = useQueryClient();
 
   const integrantesQuery = useQuery({
     queryKey: ['integrantes', filters],
     queryFn: () => integrantesAPI.getAll(filters),
+    keepPreviousData: true,
   });
 
   const createMutation = useMutation({
     mutationFn: integrantesAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
-      toast.success('Integrante creado');
+      toast.success('Integrante creado correctamente');
     },
-    onError: () => toast.error('Error al crear integrante'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo crear el integrante';
+      toast.error(message);
+    },
   });
 
   const updateMutation = useMutation({
@@ -24,10 +34,15 @@ export const useIntegrantes = (filters) => {
       method === 'patch' ? integrantesAPI.patch(id, data) : integrantesAPI.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
-      queryClient.invalidateQueries({ queryKey: ['integrante', variables.id] });
+      if (variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ['integrante', variables.id] });
+      }
       toast.success('Integrante actualizado');
     },
-    onError: () => toast.error('Error al actualizar integrante'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo actualizar el integrante';
+      toast.error(message);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -36,26 +51,45 @@ export const useIntegrantes = (filters) => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
       toast.success('Integrante eliminado');
     },
-    onError: () => toast.error('No se pudo eliminar el integrante'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo eliminar el integrante';
+      toast.error(message);
+    },
   });
 
   const estadoMutation = useMutation({
     mutationFn: ({ id, data }) => integrantesAPI.cambiarEstado(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['integrantes'] });
+      if (variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ['integrante', variables.id] });
+      }
       toast.success('Estado actualizado');
     },
-    onError: () => toast.error('No se pudo actualizar el estado'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo cambiar el estado';
+      toast.error(message);
+    },
   });
 
+  const results = extractResults(integrantesQuery.data);
+
   return {
-    integrantes: integrantesQuery.data?.results || [],
-    meta: integrantesQuery.data?.meta,
+    data: integrantesQuery.data,
+    integrantes: results,
+    pagination: {
+      count: integrantesQuery.data?.conteo ?? integrantesQuery.data?.count ?? results.length,
+      next: integrantesQuery.data?.siguiente ?? integrantesQuery.data?.next ?? null,
+      previous: integrantesQuery.data?.anterior ?? integrantesQuery.data?.previous ?? null,
+    },
     isLoading: integrantesQuery.isLoading,
-    createIntegrante: createMutation.mutate,
-    updateIntegrante: updateMutation.mutate,
-    deleteIntegrante: deleteMutation.mutate,
-    changeEstado: estadoMutation.mutate,
+    isError: integrantesQuery.isError,
+    error: integrantesQuery.error,
+    refetch: integrantesQuery.refetch,
+    createIntegrante: createMutation.mutateAsync,
+    updateIntegrante: updateMutation.mutateAsync,
+    deleteIntegrante: deleteMutation.mutateAsync,
+    changeEstado: estadoMutation.mutateAsync,
   };
 };
 

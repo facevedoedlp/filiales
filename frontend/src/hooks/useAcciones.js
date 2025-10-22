@@ -2,12 +2,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as accionesAPI from '../api/acciones';
 
-export const useAcciones = (filters) => {
+const extractResults = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  return data.resultados || data.results || [];
+};
+
+export const useAcciones = (filters = {}) => {
   const queryClient = useQueryClient();
 
   const accionesQuery = useQuery({
     queryKey: ['acciones', filters],
     queryFn: () => accionesAPI.getAll(filters),
+    keepPreviousData: true,
   });
 
   const createMutation = useMutation({
@@ -16,7 +23,10 @@ export const useAcciones = (filters) => {
       queryClient.invalidateQueries({ queryKey: ['acciones'] });
       toast.success('Acción registrada');
     },
-    onError: () => toast.error('Error al registrar la acción'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo registrar la acción';
+      toast.error(message);
+    },
   });
 
   const updateMutation = useMutation({
@@ -24,10 +34,15 @@ export const useAcciones = (filters) => {
       method === 'patch' ? accionesAPI.patch(id, data) : accionesAPI.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['acciones'] });
-      queryClient.invalidateQueries({ queryKey: ['accion', variables.id] });
+      if (variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ['accion', variables.id] });
+      }
       toast.success('Acción actualizada');
     },
-    onError: () => toast.error('Error al actualizar la acción'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo actualizar la acción';
+      toast.error(message);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -36,26 +51,44 @@ export const useAcciones = (filters) => {
       queryClient.invalidateQueries({ queryKey: ['acciones'] });
       toast.success('Acción eliminada');
     },
-    onError: () => toast.error('No se pudo eliminar la acción'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo eliminar la acción';
+      toast.error(message);
+    },
   });
 
   const uploadMutation = useMutation({
     mutationFn: ({ id, formData }) => accionesAPI.uploadImage(id, formData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accion'] });
-      toast.success('Imagen subida');
+    onSuccess: (_, variables) => {
+      if (variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ['accion', variables.id] });
+      }
+      toast.success('Imagen subida correctamente');
     },
-    onError: () => toast.error('No se pudo subir la imagen'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo subir la imagen';
+      toast.error(message);
+    },
   });
 
+  const results = extractResults(accionesQuery.data);
+
   return {
-    acciones: accionesQuery.data?.results || [],
-    meta: accionesQuery.data?.meta,
+    data: accionesQuery.data,
+    acciones: results,
+    pagination: {
+      count: accionesQuery.data?.conteo ?? accionesQuery.data?.count ?? results.length,
+      next: accionesQuery.data?.siguiente ?? accionesQuery.data?.next ?? null,
+      previous: accionesQuery.data?.anterior ?? accionesQuery.data?.previous ?? null,
+    },
     isLoading: accionesQuery.isLoading,
-    createAccion: createMutation.mutate,
-    updateAccion: updateMutation.mutate,
-    deleteAccion: deleteMutation.mutate,
-    uploadImagen: uploadMutation.mutate,
+    isError: accionesQuery.isError,
+    error: accionesQuery.error,
+    refetch: accionesQuery.refetch,
+    createAccion: createMutation.mutateAsync,
+    updateAccion: updateMutation.mutateAsync,
+    deleteAccion: deleteMutation.mutateAsync,
+    uploadImagen: uploadMutation.mutateAsync,
   };
 };
 

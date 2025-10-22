@@ -7,7 +7,7 @@ export const Spinner = ({ size = 'md', className = '' }) => {
 
   return (
     <span
-      className={`inline-block animate-spin rounded-full border-red-600 border-t-transparent ${sizes[size]} ${className}`}
+      className={`inline-block animate-spin rounded-full border-[#c41230] border-t-transparent ${sizes[size]} ${className}`}
       role="status"
     >
       <span className="sr-only">Cargando...</span>

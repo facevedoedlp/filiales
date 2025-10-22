@@ -2,21 +2,31 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as entradasAPI from '../api/entradas';
 
-export const useEntradas = (filters) => {
+const extractResults = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  return data.resultados || data.results || [];
+};
+
+export const useEntradas = (filters = {}) => {
   const queryClient = useQueryClient();
 
   const entradasQuery = useQuery({
     queryKey: ['entradas', filters],
     queryFn: () => entradasAPI.getAll(filters),
+    keepPreviousData: true,
   });
 
   const createMutation = useMutation({
     mutationFn: entradasAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['entradas'] });
-      toast.success('Solicitud enviada');
+      toast.success('Solicitud registrada');
     },
-    onError: () => toast.error('Error al enviar la solicitud'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo registrar la solicitud';
+      toast.error(message);
+    },
   });
 
   const updateMutation = useMutation({
@@ -24,10 +34,15 @@ export const useEntradas = (filters) => {
       method === 'patch' ? entradasAPI.patch(id, data) : entradasAPI.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['entradas'] });
-      queryClient.invalidateQueries({ queryKey: ['entrada', variables.id] });
+      if (variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ['entrada', variables.id] });
+      }
       toast.success('Solicitud actualizada');
     },
-    onError: () => toast.error('No se pudo actualizar la solicitud'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo actualizar la solicitud';
+      toast.error(message);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -36,36 +51,61 @@ export const useEntradas = (filters) => {
       queryClient.invalidateQueries({ queryKey: ['entradas'] });
       toast.success('Solicitud eliminada');
     },
-    onError: () => toast.error('No se pudo eliminar la solicitud'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo eliminar la solicitud';
+      toast.error(message);
+    },
   });
 
   const aprobarMutation = useMutation({
     mutationFn: ({ id, data }) => entradasAPI.aprobar(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['entradas'] });
+      if (variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ['entrada', variables.id] });
+      }
       toast.success('Solicitud aprobada');
     },
-    onError: () => toast.error('No se pudo aprobar la solicitud'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo aprobar la solicitud';
+      toast.error(message);
+    },
   });
 
   const rechazarMutation = useMutation({
     mutationFn: ({ id, data }) => entradasAPI.rechazar(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['entradas'] });
+      if (variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ['entrada', variables.id] });
+      }
       toast.success('Solicitud rechazada');
     },
-    onError: () => toast.error('No se pudo rechazar la solicitud'),
+    onError: (error) => {
+      const message = error.response?.data?.detail || 'No se pudo rechazar la solicitud';
+      toast.error(message);
+    },
   });
 
+  const results = extractResults(entradasQuery.data);
+
   return {
-    entradas: entradasQuery.data?.results || [],
-    meta: entradasQuery.data?.meta,
+    data: entradasQuery.data,
+    entradas: results,
+    pagination: {
+      count: entradasQuery.data?.conteo ?? entradasQuery.data?.count ?? results.length,
+      next: entradasQuery.data?.siguiente ?? entradasQuery.data?.next ?? null,
+      previous: entradasQuery.data?.anterior ?? entradasQuery.data?.previous ?? null,
+    },
     isLoading: entradasQuery.isLoading,
-    createEntrada: createMutation.mutate,
-    updateEntrada: updateMutation.mutate,
-    deleteEntrada: deleteMutation.mutate,
-    aprobarEntrada: aprobarMutation.mutate,
-    rechazarEntrada: rechazarMutation.mutate,
+    isError: entradasQuery.isError,
+    error: entradasQuery.error,
+    refetch: entradasQuery.refetch,
+    createEntrada: createMutation.mutateAsync,
+    updateEntrada: updateMutation.mutateAsync,
+    deleteEntrada: deleteMutation.mutateAsync,
+    aprobarEntrada: aprobarMutation.mutateAsync,
+    rechazarEntrada: rechazarMutation.mutateAsync,
   };
 };
 

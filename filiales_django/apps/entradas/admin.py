@@ -1,6 +1,5 @@
+from apps.entradas.models import AsignacionEntrada, SolicitudEntrada
 from django.contrib import admin
-
-from .models import SolicitudEntrada
 
 
 @admin.register(SolicitudEntrada)
@@ -8,11 +7,25 @@ class SolicitudEntradaAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "filial",
-        "solicitante",
-        "cantidad_solicitada",
-        "cantidad_aprobada",
+        "partido",
         "estado",
-        "fecha_solicitud",
+        "cantidad_solicitada",
+        "created_at",
     )
-    list_filter = ("estado", "filial")
-    search_fields = ("filial__nombre", "solicitante__username")
+    list_filter = ("estado", "filial", "partido")
+    search_fields = ("filial__nombre", "partido__titulo")
+    autocomplete_fields = ("filial", "partido", "created_by")
+
+
+@admin.register(AsignacionEntrada)
+class AsignacionEntradaAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "solicitud",
+        "cantidad_asignada",
+        "asignado_por",
+        "created_at",
+    )
+    list_filter = ("solicitud__filial", "solicitud__partido")
+    search_fields = ("solicitud__filial__nombre", "solicitud__partido__titulo")
+    autocomplete_fields = ("solicitud", "asignado_por")

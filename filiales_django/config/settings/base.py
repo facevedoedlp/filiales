@@ -1,25 +1,18 @@
-"""Configuración base compartida por todos los entornos."""
 from __future__ import annotations
 
 import os
 from datetime import timedelta
 from pathlib import Path
 
-import environ
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(BASE_DIR / ".env")
 
-env = environ.Env(
-    DEBUG=(bool, False),
-    SECRET_KEY=(str, "cambia-esta-clave"),
-)
+SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
-environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"), overwrite=False)
-
-SECRET_KEY = env("SECRET_KEY")
-DEBUG = env("DEBUG")
-
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
+ALLOWED_HOSTS = [host for host in os.getenv("ALLOWED_HOSTS", "*").split(",") if host]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -28,23 +21,21 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django.contrib.sites",
+    "django.contrib.postgres",
     "rest_framework",
-    "rest_framework.authtoken",
     "rest_framework_simplejwt",
-    "drf_spectacular",
     "django_filters",
     "corsheaders",
-    "apps.integrantes",
+    "drf_yasg",
+    "apps.core",
+    "apps.usuarios",
     "apps.filiales",
-    "apps.acciones",
+    "apps.partidos",
     "apps.entradas",
-    "apps.foro",
-    "apps.dashboard",
-    "core",
+    "apps.pedidos",
+    "apps.mensajes",
+    "apps.auditoria",
 ]
-
-SITE_ID = 1
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -78,12 +69,29 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASES = {
-    "default": env.db(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
-}
+if os.getenv("USE_SQLITE", "false").lower() == "true":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME", "filiales"),
+            "USER": os.getenv("DB_USER", "postgres"),
+            "PASSWORD": os.getenv("DB_PASSWORD", "postgres"),
+            "HOST": os.getenv("DB_HOST", "db"),
+            "PORT": os.getenv("DB_PORT", "5432"),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -92,42 +100,26 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "es-ar"
 TIME_ZONE = "America/Argentina/Buenos_Aires"
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-FRONTEND_BUILD_DIR = BASE_DIR / "frontend" / "build" / "static"
-STATICFILES_DIRS = [FRONTEND_BUILD_DIR] if FRONTEND_BUILD_DIR.exists() else []
-
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-AUTH_USER_MODEL = "integrantes.Integrante"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
-    ),
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "core.pagination.PaginacionPorDefecto",
-    "PAGE_SIZE": 20,
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.DefaultPageNumberPagination",
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
-}
-
-SPECTACULAR_SETTINGS = {
-    "TITLE": "API Sistema de Filiales",
-    "DESCRIPTION": "Documentación automática de la API del sistema de filiales.",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 SIMPLE_JWT = {
@@ -138,33 +130,46 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-# CORS Configuration - CORREGIDO
-CORS_ALLOWED_ORIGINS = env.list(
-    "CORS_ALLOWED_ORIGINS",
-    default=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:4000",
-    ]
-)
+SWAGGER_SETTINGS = {
+    "USE_SESSION_AUTH": False,
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+        }
+    },
+}
 
-# En desarrollo, permite todos los orígenes
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    if origin
+]
+CORS_ALLOW_CREDENTIALS = True
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 
-CORS_ALLOW_CREDENTIALS = True
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    (
+        "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend"
+    ),
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "false").lower() == "true"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "false").lower() == "true"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "notificaciones@filiales.com")
+EMAILS_ENABLED = os.getenv("EMAILS_ENABLED", "false").lower() == "true"
 
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
+WEBHOOKS_ENABLED = os.getenv("WEBHOOKS_ENABLED", "false").lower() == "true"
+WEBHOOK_URL_AUDITORIA = os.getenv("WEBHOOK_URL_AUDITORIA", "")
+WEBHOOK_URL_EVENTOS = os.getenv("WEBHOOK_URL_EVENTOS", "")
 
 LOGGING = {
     "version": 1,
@@ -182,13 +187,7 @@ LOGGING = {
         }
     },
     "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-        },
-        "apps": {
-            "handlers": ["console"],
-            "level": "INFO",
-        },
+        "django": {"handlers": ["console"], "level": "INFO"},
+        "apps": {"handlers": ["console"], "level": "INFO"},
     },
 }

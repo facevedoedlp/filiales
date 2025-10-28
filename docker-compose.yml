@@ -1,18 +1,47 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  postgres:
+  db:
     image: postgres:15-alpine
-    container_name: edlp-postgres
-    restart: always
+    container_name: filiales-db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: filiales
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${DB_NAME:-filiales}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: filiales-api
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+    volumes:
+      - ./filiales_django:/app
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+
+  pgadmin:
+    image: dpage/pgadmin4:8.14
+    container_name: filiales-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@local.test}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+    depends_on:
+      - db
+    ports:
+      - "5050:80"
 
 volumes:
   postgres_data:

@@ -1,46 +1,61 @@
-"""Enrutamiento principal del proyecto."""
-from django.conf import settings
-from django.conf.urls.static import static
+from __future__ import annotations
+
+from apps.auditoria.views import AccionViewSet
+from apps.entradas.views import AsignacionEntradaViewSet, SolicitudEntradaViewSet
+from apps.filiales.views import AutoridadViewSet, FilialViewSet
+from apps.mensajes.views import ConversacionViewSet, MensajeViewSet
+from apps.partidos.views import PartidoViewSet
+from apps.pedidos.views import PedidoItemViewSet, PedidoViewSet, ProductoViewSet
+from apps.usuarios.views import MeView
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import include, path
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework import permissions
 from rest_framework.routers import DefaultRouter
 
-from apps.acciones.views import AccionViewSet
-from apps.dashboard.views import DashboardViewSet
-from apps.entradas.views import SolicitudEntradaViewSet
-from apps.filiales.views import FilialViewSet
-from apps.foro.views import CategoriaViewSet, RespuestaViewSet, TemaViewSet
-from apps.integrantes.views import IntegranteViewSet, PerfilActualView
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Sistema de Gestión de Filiales",
+        default_version="v1",
+        description="API para la gestión de filiales de Estudiantes de La Plata.",
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 router = DefaultRouter()
-router.register(r"filiales", FilialViewSet, basename="filial")
-router.register(r"integrantes", IntegranteViewSet, basename="integrante")
-router.register(r"acciones", AccionViewSet, basename="accion")
-router.register(r"entradas", SolicitudEntradaViewSet, basename="solicitud-entrada")
-router.register(r"foro/categorias", CategoriaViewSet, basename="foro-categoria")
-router.register(r"foro/hilos", TemaViewSet, basename="foro-tema")
-router.register(r"foro/respuestas", RespuestaViewSet, basename="foro-respuesta")
-router.register(r"dashboard", DashboardViewSet, basename="dashboard")
+router.register("filiales", FilialViewSet, basename="filial")
+router.register("autoridades", AutoridadViewSet, basename="autoridad")
+router.register("partidos", PartidoViewSet, basename="partido")
+router.register(
+    "solicitudes-entrada", SolicitudEntradaViewSet, basename="solicitud-entrada"
+)
+router.register(
+    "asignaciones-entrada", AsignacionEntradaViewSet, basename="asignacion-entrada"
+)
+router.register("productos", ProductoViewSet, basename="producto")
+router.register("pedidos", PedidoViewSet, basename="pedido")
+router.register("pedido-items", PedidoItemViewSet, basename="pedido-item")
+router.register("conversaciones", ConversacionViewSet, basename="conversacion")
+router.register("mensajes", MensajeViewSet, basename="mensaje")
+router.register("auditoria", AccionViewSet, basename="auditoria")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    
-    # Auth endpoints (separados)
-    path("api/auth/", include("apps.integrantes.urls")),
-    
-    # Perfil actual (ANTES del router para que tenga prioridad)
-    path("api/integrantes/me/", PerfilActualView.as_view(), name="perfil-actual-integrante"),
-    path("api/usuarios/me/", PerfilActualView.as_view(), name="perfil-actual"),
-    
-    # Router con todos los ViewSets
+    path("api/auth/", include("apps.usuarios.urls")),
+    path("api/me", MeView.as_view(), name="me"),
     path("api/", include(router.urls)),
-    
-    # Documentación
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("health/", lambda request: HttpResponse("ok"), name="health"),
+    path(
+        "swagger/",
+        schema_view.with_ui("swagger", cache_timeout=0),
+        name="schema-swagger-ui",
+    ),
+    path(
+        "swagger.json",
+        schema_view.without_ui(cache_timeout=0),
+        name="schema-json",
+    ),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

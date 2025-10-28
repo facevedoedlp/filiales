@@ -1,42 +1,59 @@
-"""Modelos de filiales."""
 from __future__ import annotations
 
-from django.conf import settings
+from apps.core.models import TimeStampedModel
 from django.db import models
 
 
-class Filial(models.Model):
-    """Representa una filial de la organización."""
-
-    class Estado(models.TextChoices):
-        ACTIVA = "ACTIVA", "Activa"
-        INACTIVA = "INACTIVA", "Inactiva"
-        SUSPENDIDA = "SUSPENDIDA", "Suspendida"
-
-    nombre = models.CharField("nombre", max_length=150, unique=True)
-    descripcion = models.TextField("descripción", blank=True)
-    direccion = models.CharField("dirección", max_length=255)
-    ciudad = models.CharField("ciudad", max_length=120)
-    provincia = models.CharField("provincia", max_length=120)
-    pais = models.CharField("país", max_length=120, default="Argentina")
-    latitud = models.DecimalField("latitud", max_digits=9, decimal_places=6, null=True, blank=True)
-    longitud = models.DecimalField("longitud", max_digits=9, decimal_places=6, null=True, blank=True)
-    telefono = models.CharField("teléfono", max_length=20, blank=True)
-    email = models.EmailField("correo electrónico", blank=True)
-    presidente = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        related_name="filiales_presididas",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-    )
-    fecha_creacion = models.DateField("fecha de creación", auto_now_add=True)
-    estado = models.CharField("estado", max_length=15, choices=Estado.choices, default=Estado.ACTIVA)
-
-    def __str__(self) -> str:
-        return self.nombre
+class Filial(TimeStampedModel):
+    nombre = models.CharField(max_length=255)
+    codigo = models.CharField(max_length=20, unique=True)
+    activa = models.BooleanField(default=True, db_index=True)
+    direccion = models.CharField(max_length=255, blank=True)
+    ciudad = models.CharField(max_length=120)
+    provincia = models.CharField(max_length=120)
+    pais = models.CharField(max_length=120, default="Argentina")
+    contacto_email = models.EmailField(blank=True)
+    contacto_telefono = models.CharField(max_length=50, blank=True)
 
     class Meta:
-        verbose_name = "Filial"
-        verbose_name_plural = "Filiales"
         ordering = ("nombre",)
+        indexes = [
+            models.Index(fields=("activa",), name="filial_activa_idx"),
+            models.Index(fields=("codigo",), name="filial_codigo_idx"),
+            models.Index(fields=("ciudad", "provincia"), name="filial_ciudad_prov_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.nombre} ({self.codigo})"
+
+
+class Autoridad(TimeStampedModel):
+    class Cargos(models.TextChoices):
+        PRESIDENTE = "PRESIDENTE", "Presidente"
+        SECRETARIO = "SECRETARIO", "Secretario"
+        TESORERO = "TESORERO", "Tesorero"
+        VOCAL = "VOCAL", "Vocal"
+        OTRO = "OTRO", "Otro"
+
+    filial = models.ForeignKey(
+        Filial, on_delete=models.CASCADE, related_name="autoridades"
+    )
+    cargo = models.CharField(max_length=20, choices=Cargos.choices)
+    persona_nombre = models.CharField(max_length=255)
+    persona_documento = models.CharField(max_length=32)
+    email = models.EmailField(blank=True)
+    telefono = models.CharField(max_length=50, blank=True)
+    desde = models.DateField()
+    hasta = models.DateField(null=True, blank=True)
+    activo = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        ordering = ("-activo", "cargo")
+        indexes = [
+            models.Index(
+                fields=("filial", "activo"), name="autoridad_filial_activo_idx"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.persona_nombre} - {self.get_cargo_display()}"

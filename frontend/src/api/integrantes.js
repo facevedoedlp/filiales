@@ -32,7 +32,7 @@ export const remove = async (id) => {
 };
 
 export const cambiarEstado = async (id, payload) => {
-  const { data } = await api.patch(`/api/integrantes/${id}/cambiar_estado/`, payload);
+  const { data } = await api.patch(`/api/integrantes/${id}/cambiar-estado/`, payload);
   return data;
 };
 

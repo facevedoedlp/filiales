@@ -8,8 +8,22 @@ from apps.core.viewsets import BaseModelViewSet
 from apps.filiales.models import Autoridad, Filial
 from apps.filiales.serializers import AutoridadSerializer, FilialSerializer
 from django.utils import timezone
-from rest_framework import decorators, exceptions, response, status
+from rest_framework import decorators, exceptions, permissions, response, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+
+
+class FilialMapaView(APIView):
+    """Devuelve las filiales activas para el mapa."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        queryset = Filial.objects.filter(activa=True)
+        perfil = getattr(request.user, "perfil", None)
+        if perfil and perfil.es_usuario_filial and perfil.filial_id:
+            queryset = queryset.filter(id=perfil.filial_id)
+        serializer = FilialSerializer(queryset, many=True)
+        return response.Response(serializer.data)
 
 
 class FilialViewSet(BaseModelViewSet):
@@ -152,3 +166,30 @@ class AutoridadViewSet(FilialScopedQuerysetMixin, BaseModelViewSet):
     scope_field = "filial"
     permission_classes = [IsAuthenticated, IsAdminAllAccess]
     allow_filial_user_writes = False
+
+    @decorators.action(
+        detail=True,
+        methods=["patch"],
+        url_path="cambiar-estado",
+        permission_classes=[IsAuthenticated, IsAdminAllAccess],
+    )
+    def cambiar_estado(self, request, pk=None):
+        autoridad = self.get_object()
+        # Aceptar tanto 'activo' como 'estado'
+        activo = request.data.get("activo")
+        if activo is None:
+            estado = request.data.get("estado", "").upper()
+            if estado == "ACTIVO":
+                activo = True
+            elif estado == "INACTIVO":
+                activo = False
+            else:
+                raise exceptions.ValidationError("El campo 'activo' o 'estado' es requerido")
+        else:
+            activo = bool(activo)
+        
+        autoridad.activo = activo
+        autoridad.save(update_fields=["activo", "updated_at"])
+        self.log_action(autoridad, Accion.Tipos.ACTUALIZAR, payload={"activo": activo})
+        serializer = self.get_serializer(autoridad)
+        return response.Response(serializer.data)

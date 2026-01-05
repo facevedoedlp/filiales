@@ -37,7 +37,7 @@ const AccionesList = () => {
     [page, filters, pageSize]
   );
 
-  const { data, isLoading, isError, error, acciones, pagination, deleteAccion } = useAcciones(listFilters);
+  const { data, isLoading, isError, error, acciones, pagination } = useAcciones(listFilters);
   const { filiales } = useFiliales(useMemo(() => ({ page_size: 200 }), []));
 
   const accionesList = data?.resultados || data?.results || acciones || [];
@@ -45,12 +45,6 @@ const AccionesList = () => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const filialesOptions = filiales.map((filial) => ({ value: filial.id, label: filial.nombre }));
-
-  const handleDelete = async (accionId) => {
-    const confirmed = window.confirm('¿Deseas eliminar esta acción?');
-    if (!confirmed) return;
-    await deleteAccion(accionId);
-  };
 
   if (isLoading) {
     return (
@@ -168,11 +162,7 @@ const AccionesList = () => {
                   <Button variant="secondary" size="sm" onClick={() => navigate(`/acciones/${accion.id}`)}>
                     Ver detalle
                   </Button>
-                  {user?.rol !== ROLES.INTEGRANTE && (
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(accion.id)}>
-                      Eliminar
-                    </Button>
-                  )}
+                  {/* Las acciones son de solo lectura (registro de auditoría) */}
                 </div>
               </div>
             </Card>

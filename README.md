@@ -1,12 +1,17 @@
-# Sistema de Gestión de Filiales - Backend
+# Sistema de Gestión de Filiales
 
-Backend productivo construido con **Django 4**, **Django REST Framework** y **PostgreSQL** para administrar las filiales de Estudiantes de La Plata. Incluye autenticación JWT, control de accesos por rol, auditoría, webhooks, notificaciones por correo y un conjunto completo de endpoints REST documentados en Swagger.
+Sistema full-stack construido con **Django 4 + Django REST Framework** (backend) y **React + Vite** (frontend) para administrar las filiales de Estudiantes de La Plata. Incluye autenticación JWT, control de accesos por rol, auditoría, webhooks, notificaciones por correo y un conjunto completo de endpoints REST documentados en Swagger.
 
 ## Requisitos
 
-- Docker 24+
-- Docker Compose 2+
-- Make
+### Backend
+- Docker 24+ (recomendado)
+- Docker Compose 2+ (recomendado)
+- Python 3.12+ (para desarrollo local)
+- PostgreSQL 15+ (o SQLite para desarrollo)
+
+### Frontend
+- Node.js 18+ y npm/yarn/pnpm
 
 ## Variables de entorno
 
@@ -46,7 +51,9 @@ make down        # detiene y elimina contenedores
 
 ## Entorno de desarrollo local
 
-Si desea ejecutar la app sin Docker utilice SQLite habilitando `USE_SQLITE=true` y ejecute:
+### Backend (sin Docker)
+
+Si desea ejecutar el backend sin Docker utilice SQLite habilitando `USE_SQLITE=true` y ejecute:
 
 ```bash
 pip install -r filiales_django/requirements/requirements.txt
@@ -54,6 +61,40 @@ export DJANGO_SETTINGS_MODULE=config.settings.development
 python filiales_django/manage.py migrate
 python filiales_django/manage.py runserver
 ```
+
+### Frontend
+
+Para ejecutar el frontend en modo desarrollo:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+El frontend estará disponible en `http://localhost:5173` y se conectará automáticamente al backend en `http://localhost:8000`.
+
+### Desarrollo completo (Backend + Frontend)
+
+1. **Iniciar el backend** (en una terminal):
+   ```bash
+   make up          # Si usa Docker
+   # O
+   python filiales_django/manage.py runserver  # Si usa desarrollo local
+   ```
+
+2. **Iniciar el frontend** (en otra terminal):
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+3. Acceder a la aplicación:
+   - Frontend: `http://localhost:5173`
+   - Backend API: `http://localhost:8000`
+   - Swagger UI: `http://localhost:8000/swagger/`
+   - Admin Django: `http://localhost:8000/admin/`
 
 ## Tests y calidad
 

@@ -16,7 +16,7 @@ export const refreshToken = async (refresh) => {
 };
 
 export const getCurrentUser = async () => {
-  const { data } = await api.get('/api/integrantes/me/');
+  const { data } = await api.get('/api/me/');
   return data;
 };
 

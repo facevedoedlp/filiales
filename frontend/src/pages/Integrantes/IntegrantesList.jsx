@@ -69,7 +69,7 @@ const IntegrantesList = () => {
       header: 'Integrante',
       cell: (row) => (
         <div>
-          <p className="font-semibold text-slate-900">{row.nombre}</p>
+          <p className="font-semibold text-slate-900">{row.persona_nombre || row.nombre}</p>
           <p className="text-xs text-slate-500">{row.email}</p>
         </div>
       ),
@@ -225,6 +225,7 @@ const IntegrantesList = () => {
           }
           filialesOptions={filialesOptions}
           onSubmit={handleSubmit}
+          isAdmin={user?.rol === 'ADMINISTRADOR' || user?.role === 'ADMINISTRADOR'}
         />
         {selectedIntegrante && (
           <div className="mt-4 flex justify-end">

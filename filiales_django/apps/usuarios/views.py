@@ -30,3 +30,12 @@ class MeView(APIView):
             }
         )
         return response.Response(serializer.data)
+
+
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        # SimpleJWT no requiere logout del servidor, solo limpiar tokens del cliente
+        # Este endpoint existe para compatibilidad con el frontend
+        return response.Response({"message": "Logout exitoso"}, status=status.HTTP_200_OK)

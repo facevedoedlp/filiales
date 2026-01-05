@@ -57,7 +57,7 @@ class SolicitudEntradaViewSet(FilialScopedQuerysetMixin, BaseModelViewSet):
 
     @decorators.action(
         detail=True,
-        methods=["post"],
+        methods=["post", "patch"],
         url_path="aprobar",
         permission_classes=[IsAuthenticated, IsAdminAllAccess],
     )
@@ -125,7 +125,7 @@ class SolicitudEntradaViewSet(FilialScopedQuerysetMixin, BaseModelViewSet):
 
     @decorators.action(
         detail=True,
-        methods=["post"],
+        methods=["post", "patch"],
         url_path="rechazar",
         permission_classes=[IsAuthenticated, IsAdminAllAccess],
     )

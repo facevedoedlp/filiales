@@ -46,6 +46,8 @@ class Autoridad(TimeStampedModel):
     desde = models.DateField()
     hasta = models.DateField(null=True, blank=True)
     activo = models.BooleanField(default=True, db_index=True)
+    es_socio = models.BooleanField(default=False, db_index=True, verbose_name="Es socio del club")
+    numero_socio = models.CharField(max_length=50, blank=True, verbose_name="Número de socio")
 
     class Meta:
         ordering = ("-activo", "cargo")

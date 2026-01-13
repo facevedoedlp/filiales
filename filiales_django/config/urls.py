@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from apps.auditoria.views import AccionViewSet
+from apps.acciones.views import AccionSolidariaViewSet
 from apps.entradas.views import AsignacionEntradaViewSet, SolicitudEntradaViewSet
 from apps.filiales.views import AutoridadViewSet, FilialMapaView, FilialViewSet
 from apps.mensajes.views import ConversacionViewSet, MensajeViewSet
@@ -14,6 +15,8 @@ from apps.core.views import (
 )
 from apps.foro.views import CategoriaViewSet, HiloViewSet, RespuestaViewSet
 from apps.usuarios.views import MeView
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import include, path
@@ -49,7 +52,7 @@ router.register("pedido-items", PedidoItemViewSet, basename="pedido-item")
 router.register("conversaciones", ConversacionViewSet, basename="conversacion")
 router.register("mensajes", MensajeViewSet, basename="mensaje")
 router.register("auditoria", AccionViewSet, basename="auditoria")
-router.register("acciones", AccionViewSet, basename="accion")  # Alias para compatibilidad
+router.register("acciones", AccionSolidariaViewSet, basename="accion")
 router.register("integrantes", AutoridadViewSet, basename="integrante")
 
 urlpatterns = [
@@ -82,3 +85,6 @@ urlpatterns = [
         name="schema-json",
     ),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

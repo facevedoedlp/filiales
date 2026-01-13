@@ -14,6 +14,8 @@ class PartidoSerializer(serializers.ModelSerializer):
             "lugar",
             "descripcion",
             "estado",
+            "habilitado",
+            "solo_socios",
             "cupo_total",
             "cupo_disponible",
             "created_at",

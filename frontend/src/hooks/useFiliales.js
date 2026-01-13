@@ -2,6 +2,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as filialesAPI from '../api/filiales';
 
+const getErrorMessage = (error, fallback) => {
+  const data = error.response?.data;
+  if (typeof data === 'string') return data;
+  if (data && typeof data === 'object') {
+    const firstKey = Object.keys(data)[0];
+    if (firstKey && Array.isArray(data[firstKey])) {
+      return data[firstKey][0];
+    }
+    if (firstKey && typeof data[firstKey] === 'string') {
+      return data[firstKey];
+    }
+  }
+  return error.response?.data?.detail || fallback;
+};
+
 const extractResults = (data) => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -29,7 +44,7 @@ export const useFiliales = (filters = {}) => {
       toast.success('Filial creada correctamente');
     },
     onError: (error) => {
-      const message = error.response?.data?.detail || 'No se pudo crear la filial';
+      const message = getErrorMessage(error, 'No se pudo crear la filial');
       toast.error(message);
     },
   });
@@ -45,19 +60,31 @@ export const useFiliales = (filters = {}) => {
       toast.success('Filial actualizada');
     },
     onError: (error) => {
-      const message = error.response?.data?.detail || 'No se pudo actualizar la filial';
+      const message = getErrorMessage(error, 'No se pudo actualizar la filial');
       toast.error(message);
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: filialesAPI.remove,
+  const desactivarMutation = useMutation({
+    mutationFn: filialesAPI.deshabilitar,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['filiales'] });
-      toast.success('Filial eliminada');
+      toast.success('Filial desactivada');
     },
     onError: (error) => {
-      const message = error.response?.data?.detail || 'No se pudo eliminar la filial';
+      const message = getErrorMessage(error, 'No se pudo desactivar la filial');
+      toast.error(message);
+    },
+  });
+
+  const activarMutation = useMutation({
+    mutationFn: filialesAPI.habilitar,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['filiales'] });
+      toast.success('Filial activada');
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error, 'No se pudo activar la filial');
       toast.error(message);
     },
   });
@@ -80,7 +107,8 @@ export const useFiliales = (filters = {}) => {
     isMapaLoading: mapaQuery.isLoading,
     createFilial: createMutation.mutateAsync,
     updateFilial: updateMutation.mutateAsync,
-    deleteFilial: deleteMutation.mutateAsync,
+    desactivarFilial: desactivarMutation.mutateAsync,
+    activarFilial: activarMutation.mutateAsync,
   };
 };
 

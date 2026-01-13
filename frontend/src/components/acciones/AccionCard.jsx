@@ -18,9 +18,9 @@ export const AccionCard = ({ accion, onDelete }) => {
       }
     >
       <div className="space-y-3">
-        {accion.imagen_principal && (
+        {(accion.imagen_principal_url || accion.imagen_principal) && (
           <img
-            src={accion.imagen_principal}
+            src={accion.imagen_principal_url || accion.imagen_principal}
             alt={accion.nombre}
             className="h-48 w-full rounded-md object-cover"
           />

@@ -18,8 +18,17 @@ const EntradasApproval = () => {
       ) : (
         <EntradaApproval
           entradas={entradas}
-          onAprobar={(entrada) => aprobarEntrada({ id: entrada.id, data: {} })}
-          onRechazar={(entrada) => rechazarEntrada({ id: entrada.id, data: {} })}
+          onAprobar={(entrada) => {
+            const value = window.prompt('Cantidad a asignar', entrada.cantidad_solicitada || '');
+            if (!value) return;
+            const cantidad = Number(value);
+            if (!Number.isFinite(cantidad) || cantidad <= 0) return;
+            return aprobarEntrada({ id: entrada.id, data: { cantidad_asignada: cantidad } });
+          }}
+          onRechazar={(entrada) => {
+            const motivo = window.prompt('Motivo del rechazo (opcional)', '');
+            return rechazarEntrada({ id: entrada.id, data: { motivo: motivo || '' } });
+          }}
         />
       )}
     </div>

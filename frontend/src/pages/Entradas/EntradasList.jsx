@@ -19,14 +19,15 @@ const EntradasList = () => {
   const [filters, setFilters] = useState({});
   const pageSize = 10;
 
-  const listFilters = useMemo(
-    () => ({
+  const listFilters = useMemo(() => {
+    const { desde, ...rest } = filters;
+    return {
       page,
       page_size: pageSize,
-      ...filters,
-    }),
-    [page, pageSize, filters]
-  );
+      ...(desde ? { created_at__date__gte: desde } : {}),
+      ...rest,
+    };
+  }, [page, pageSize, filters]);
 
   const { data, isLoading, isError, error, pagination } = useEntradas(listFilters);
   const { filiales } = useFiliales(useMemo(() => ({ page_size: 200 }), []));
@@ -42,8 +43,10 @@ const EntradasList = () => {
       header: 'Solicitud',
       cell: (row) => (
         <div>
-          <p className="font-semibold text-slate-900">{row.evento || row.partido || `Solicitud #${row.id}`}</p>
-          <p className="text-xs text-slate-500">Cantidad: {row.cantidad || row.cantidad_solicitada || 0}</p>
+          <p className="font-semibold text-slate-900">
+            {row.partido_titulo || row.partido || `Solicitud #${row.id}`}
+          </p>
+          <p className="text-xs text-slate-500">Cantidad: {row.cantidad_solicitada || 0}</p>
         </div>
       ),
     },
@@ -55,7 +58,7 @@ const EntradasList = () => {
     {
       key: 'solicitante',
       header: 'Integrante',
-      cell: (row) => row.integrante_nombre || row.integrante?.nombre || 'Sin datos',
+      cell: (row) => row.created_by_nombre || row.integrante?.nombre || 'Sin datos',
     },
     {
       key: 'estado',

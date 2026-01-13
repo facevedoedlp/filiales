@@ -20,6 +20,8 @@ class Partido(TimeStampedModel):
         default=Estados.PROGRAMADO,
         db_index=True,
     )
+    habilitado = models.BooleanField(default=True, db_index=True)
+    solo_socios = models.BooleanField(default=False, db_index=True)
     cupo_total = models.PositiveIntegerField(null=True, blank=True)
     cupo_disponible = models.PositiveIntegerField(null=True, blank=True)
 

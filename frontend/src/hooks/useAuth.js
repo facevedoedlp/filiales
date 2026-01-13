@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as authAPI from '../api/auth';
 import { useAuthStore } from '../store/authStore';
-import { getAccessToken, setTokens, clearTokens } from '../api/tokenStorage';
+import { getAccessToken, setTokens } from '../api/tokenStorage';
 
 const normalizeUser = (payload) => {
   if (!payload) return null;
@@ -49,7 +49,6 @@ export const useAuth = () => {
   const logoutMutation = useMutation({
     mutationFn: authAPI.logout,
     onSettled: () => {
-      clearTokens();
       logoutStore();
       queryClient.clear();
       toast.success('Sesion finalizada');
@@ -74,7 +73,6 @@ export const useAuth = () => {
       console.error('Error en meQuery:', error);
       // Solo hacer logout si es error de autenticacion
       if (error.response?.status === 401 || error.response?.status === 403) {
-        clearTokens();
         logoutStore();
       }
     },

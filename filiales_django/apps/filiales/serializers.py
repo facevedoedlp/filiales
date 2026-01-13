@@ -5,6 +5,8 @@ from rest_framework import serializers
 
 
 class FilialSerializer(serializers.ModelSerializer):
+    total_integrantes = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Filial
         fields = [
@@ -18,6 +20,7 @@ class FilialSerializer(serializers.ModelSerializer):
             "pais",
             "contacto_email",
             "contacto_telefono",
+            "total_integrantes",
             "created_at",
             "updated_at",
         ]

@@ -2,14 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
-import Select from '../common/Select';
 import { composeValidators, required } from '../../utils/validators';
-
-const tipoOptions = [
-  { value: 'CLUB', label: 'Club' },
-  { value: 'AGRUPACION', label: 'Agrupación' },
-  { value: 'REGIONAL', label: 'Regional' },
-];
 
 export const FilialForm = ({ defaultValues, onSubmit, isSubmitting }) => {
   const {
@@ -35,25 +28,47 @@ export const FilialForm = ({ defaultValues, onSubmit, isSubmitting }) => {
           {...register('nombre', composeValidators(required()))}
         />
         <Input
+          label="Codigo"
+          placeholder="ZUBELDIA"
+          error={errors.codigo?.message}
+          {...register('codigo', composeValidators(required()))}
+        />
+        <Input
           label="Ciudad"
           placeholder="Ciudad"
           error={errors.ciudad?.message}
           {...register('ciudad', composeValidators(required()))}
         />
         <Input
-          label="Dirección"
-          placeholder="Dirección completa"
+          label="Provincia"
+          placeholder="Provincia"
+          error={errors.provincia?.message}
+          {...register('provincia', composeValidators(required()))}
+        />
+        <Input
+          label="Pais"
+          placeholder="Argentina"
+          error={errors.pais?.message}
+          {...register('pais', composeValidators(required()))}
+        />
+        <Input
+          label="Direccion"
+          placeholder="Direccion completa"
           error={errors.direccion?.message}
-          {...register('direccion', composeValidators(required()))}
+          {...register('direccion')}
         />
-        <Select
-          label="Tipo"
-          options={tipoOptions}
-          error={errors.tipo?.message}
-          {...register('tipo', composeValidators(required()))}
+        <Input
+          label="Email de contacto"
+          placeholder="contacto@filial.com"
+          error={errors.contacto_email?.message}
+          {...register('contacto_email')}
         />
-        <Input label="Latitud" type="number" step="any" {...register('latitud')} />
-        <Input label="Longitud" type="number" step="any" {...register('longitud')} />
+        <Input
+          label="Telefono de contacto"
+          placeholder="+54 9 221 ..."
+          error={errors.contacto_telefono?.message}
+          {...register('contacto_telefono')}
+        />
       </div>
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={isSubmitting}>

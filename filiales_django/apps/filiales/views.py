@@ -7,6 +7,7 @@ from apps.core.services import dispatch_webhook, send_notification_email
 from apps.core.viewsets import BaseModelViewSet
 from apps.filiales.models import Autoridad, Filial
 from apps.filiales.serializers import AutoridadSerializer, FilialSerializer
+from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import decorators, exceptions, permissions, response, status
 from rest_framework.permissions import IsAuthenticated
@@ -41,7 +42,9 @@ class FilialViewSet(BaseModelViewSet):
 
     def get_queryset(self):  # type: ignore[override]
         queryset = super().get_queryset()
-        queryset = queryset.select_related()
+        queryset = queryset.select_related().annotate(
+            total_integrantes=Count("autoridades", filter=Q(autoridades__activo=True))
+        )
         perfil = getattr(self.request.user, "perfil", None)
         if perfil and perfil.es_usuario_filial and perfil.filial_id:
             return queryset.filter(id=perfil.filial_id)

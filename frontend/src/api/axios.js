@@ -3,8 +3,8 @@ import {
   getAccessToken,
   getRefreshToken,
   setTokens,
-  clearTokens,
 } from './tokenStorage';
+import { useAuthStore } from '../store/authStore';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 
@@ -34,6 +34,10 @@ const redirectToLogin = () => {
   }
 };
 
+const forceLogout = () => {
+  useAuthStore.getState().logout();
+};
+
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) {
@@ -60,7 +64,7 @@ api.interceptors.response.use(
 
       const refreshToken = getRefreshToken();
       if (!refreshToken) {
-        clearTokens();
+        forceLogout();
         redirectToLogin();
         return Promise.reject(error);
       }
@@ -89,7 +93,7 @@ api.interceptors.response.use(
         return api(config);
       } catch (refreshError) {
         resolvePending(null);
-        clearTokens();
+        forceLogout();
         redirectToLogin();
         return Promise.reject(refreshError);
       } finally {
@@ -98,7 +102,7 @@ api.interceptors.response.use(
     }
 
     if (response.status === 401 || (response.status === 403 && !getAccessToken())) {
-      clearTokens();
+      forceLogout();
       redirectToLogin();
     }
 

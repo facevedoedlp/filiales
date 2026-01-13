@@ -1,32 +1,23 @@
-import { Link } from 'react-router-dom';
 import { Card } from '../common/Card';
 import Badge from '../common/Badge';
 import { formatDate } from '../../utils/formatters';
 
-export const FilialDetail = ({ filial }) => {
+export const FilialDetail = ({ filial, integrantes = [], acciones = [] }) => {
   if (!filial) return null;
 
   return (
     <div className="space-y-6">
       <Card
         title={filial.nombre}
-        description={`${filial.direccion} - ${filial.ciudad}`}
-        actions={
-          <Link
-            to={`/filiales/${filial.id}/editar`}
-            className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-          >
-            Editar
-          </Link>
-        }
+        description={`${filial.direccion || 'Sin direccion'} - ${filial.ciudad}`}
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <h4 className="text-sm font-semibold text-slate-900">Información general</h4>
+            <h4 className="text-sm font-semibold text-slate-900">Informacion general</h4>
             <dl className="mt-2 space-y-2 text-sm text-slate-600">
               <div>
-                <dt className="font-semibold text-slate-700">Tipo</dt>
-                <dd>{filial.tipo}</dd>
+                <dt className="font-semibold text-slate-700">Codigo</dt>
+                <dd>{filial.codigo}</dd>
               </div>
               <div>
                 <dt className="font-semibold text-slate-700">Estado</dt>
@@ -37,8 +28,8 @@ export const FilialDetail = ({ filial }) => {
                 </dd>
               </div>
               <div>
-                <dt className="font-semibold text-slate-700">Fecha de creación</dt>
-                <dd>{formatDate(filial.fecha_creacion)}</dd>
+                <dt className="font-semibold text-slate-700">Fecha de creacion</dt>
+                <dd>{formatDate(filial.created_at)}</dd>
               </div>
             </dl>
           </div>
@@ -47,11 +38,11 @@ export const FilialDetail = ({ filial }) => {
             <dl className="mt-2 space-y-2 text-sm text-slate-600">
               <div>
                 <dt className="font-semibold text-slate-700">Correo</dt>
-                <dd>{filial.email}</dd>
+                <dd>{filial.contacto_email || 'Sin email'}</dd>
               </div>
               <div>
-                <dt className="font-semibold text-slate-700">Teléfono</dt>
-                <dd>{filial.telefono}</dd>
+                <dt className="font-semibold text-slate-700">Telefono</dt>
+                <dd>{filial.contacto_telefono || 'Sin telefono'}</dd>
               </div>
             </dl>
           </div>
@@ -60,19 +51,16 @@ export const FilialDetail = ({ filial }) => {
 
       <Card title="Integrantes" description="Integrantes activos de la filial">
         <div className="space-y-3">
-          {filial.integrantes?.length ? (
-            filial.integrantes.map((integrante) => (
-              <div key={integrante.id} className="flex items-center justify-between rounded-md border border-slate-100 px-4 py-3">
+          {integrantes.length ? (
+            integrantes.map((integrante) => (
+              <div
+                key={integrante.id}
+                className="flex items-center justify-between rounded-md border border-slate-100 px-4 py-3"
+              >
                 <div>
-                  <p className="font-semibold text-slate-900">{integrante.nombre}</p>
-                  <p className="text-xs text-slate-500">{integrante.rol}</p>
+                  <p className="font-semibold text-slate-900">{integrante.persona_nombre}</p>
+                  <p className="text-xs text-slate-500">{integrante.cargo}</p>
                 </div>
-                <Link
-                  to={`/integrantes/${integrante.id}`}
-                  className="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                >
-                  Ver perfil
-                </Link>
               </div>
             ))
           ) : (
@@ -81,21 +69,18 @@ export const FilialDetail = ({ filial }) => {
         </div>
       </Card>
 
-      <Card title="Acciones" description="Últimas acciones de la filial">
+      <Card title="Acciones" description="Ultimas acciones de la filial">
         <div className="space-y-3">
-          {filial.acciones?.length ? (
-            filial.acciones.map((accion) => (
-              <div key={accion.id} className="flex items-center justify-between rounded-md border border-slate-100 px-4 py-3">
+          {acciones.length ? (
+            acciones.map((accion) => (
+              <div
+                key={accion.id}
+                className="flex items-center justify-between rounded-md border border-slate-100 px-4 py-3"
+              >
                 <div>
                   <p className="font-semibold text-slate-900">{accion.nombre}</p>
                   <p className="text-xs text-slate-500">{formatDate(accion.fecha)}</p>
                 </div>
-                <Link
-                  to={`/acciones/${accion.id}`}
-                  className="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                >
-                  Ver detalle
-                </Link>
               </div>
             ))
           ) : (

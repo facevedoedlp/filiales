@@ -16,6 +16,8 @@ class PartidoViewSet(BaseModelViewSet):
     filterset_fields = {
         "estado": ["exact"],
         "fecha": ["gte", "lte"],
+        "habilitado": ["exact"],
+        "solo_socios": ["exact"],
     }
     search_fields = ["titulo", "lugar", "descripcion"]
     ordering_fields = ["fecha", "titulo", "created_at"]

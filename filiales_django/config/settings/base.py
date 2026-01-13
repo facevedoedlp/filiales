@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.mensajes",
     "apps.auditoria",
     "apps.foro",
+    "apps.acciones",
 ]
 
 MIDDLEWARE = [

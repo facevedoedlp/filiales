@@ -40,12 +40,24 @@ const IntegrantesList = () => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const filialesOptions = filiales.map((filial) => ({ value: filial.id, label: filial.nombre }));
+  const filialesById = useMemo(
+    () => new Map(filiales.map((filial) => [String(filial.id), filial.nombre])),
+    [filiales]
+  );
 
   const handleSubmit = async (values) => {
+    const filialValue =
+      values.filial === '' || values.filial === undefined || values.filial === null
+        ? null
+        : Number(values.filial);
+    const payload = {
+      ...values,
+      filial: Number.isNaN(filialValue) ? values.filial : filialValue,
+    };
     if (selectedIntegrante) {
-      await updateIntegrante({ id: selectedIntegrante.id, data: values });
+      await updateIntegrante({ id: selectedIntegrante.id, data: payload });
     } else {
-      await createIntegrante(values);
+      await createIntegrante(payload);
     }
     setIsModalOpen(false);
     setSelectedIntegrante(null);
@@ -82,7 +94,11 @@ const IntegrantesList = () => {
     {
       key: 'filial',
       header: 'Filial',
-      cell: (row) => row.filial_nombre || row.filial?.nombre || 'Sin asignar',
+      cell: (row) =>
+        row.filial_nombre ||
+        row.filial?.nombre ||
+        filialesById.get(String(row.filial)) ||
+        'Sin asignar',
     },
     {
       key: 'estado',
@@ -220,7 +236,7 @@ const IntegrantesList = () => {
         <IntegranteForm
           defaultValues={
             selectedIntegrante || {
-              filial: user?.filial_id || filialesOptions[0]?.value,
+              filial: user?.filialId || filialesOptions[0]?.value,
             }
           }
           filialesOptions={filialesOptions}

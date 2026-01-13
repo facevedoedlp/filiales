@@ -7,8 +7,9 @@ export const AccionDetail = ({ accion }) => {
   const imagenes = useMemo(() => {
     if (!accion) return [];
     const list = accion.imagenes || [];
-    if (accion.imagen_principal) {
-      return [accion.imagen_principal, ...list.filter((img) => img !== accion.imagen_principal)];
+    const principal = accion.imagen_principal_url || accion.imagen_principal;
+    if (principal) {
+      return [principal, ...list.filter((img) => img !== principal)];
     }
     return list;
   }, [accion]);

@@ -35,6 +35,11 @@ class SolicitudEntradaViewSet(FilialScopedQuerysetMixin, BaseModelViewSet):
         kwargs = super().get_serializer_save_kwargs(action=action)
         if action == "create":
             kwargs["created_by"] = self.request.user
+            perfil = getattr(self.request.user, "perfil", None)
+            if perfil and perfil.es_admin:
+                filial_id = self.request.data.get("filial")
+                if filial_id:
+                    kwargs["filial_id"] = filial_id
         return kwargs
 
     def _validate_cupo(

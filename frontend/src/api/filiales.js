@@ -31,6 +31,16 @@ export const remove = async (id) => {
   return data;
 };
 
+export const habilitar = async (id) => {
+  const { data } = await api.post(`/api/filiales/${id}/habilitar/`);
+  return data;
+};
+
+export const deshabilitar = async (id) => {
+  const { data } = await api.post(`/api/filiales/${id}/deshabilitar/`);
+  return data;
+};
+
 export const getMapa = async () => {
   const { data } = await api.get('/api/filiales/mapa/');
   return data;

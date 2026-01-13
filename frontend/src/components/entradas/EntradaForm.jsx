@@ -4,9 +4,15 @@ import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import Select from '../common/Select';
 import { composeValidators, required } from '../../utils/validators';
-import { ESTADOS_ENTRADA } from '../../utils/constants';
 
-export const EntradaForm = ({ defaultValues, filialesOptions = [], onSubmit, isSubmitting, isAdmin }) => {
+export const EntradaForm = ({
+  defaultValues,
+  partidosOptions = [],
+  filialesOptions = [],
+  onSubmit,
+  isSubmitting,
+  isAdmin,
+}) => {
   const {
     register,
     handleSubmit,
@@ -23,37 +29,23 @@ export const EntradaForm = ({ defaultValues, filialesOptions = [], onSubmit, isS
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Input
-          label="Evento"
-          placeholder="Partido vs ..."
-          error={errors.evento?.message}
-          {...register('evento', composeValidators(required()))}
-        />
-        <Input
-          label="Fecha del evento"
-          type="date"
-          error={errors.fecha_evento?.message}
-          {...register('fecha_evento', composeValidators(required()))}
+        <Select
+          label="Partido"
+          options={[{ value: '', label: 'Seleccione un partido' }, ...partidosOptions]}
+          error={errors.partido?.message}
+          {...register('partido', composeValidators(required()))}
         />
         <Input
           label="Cantidad de entradas"
           type="number"
           min={1}
-          error={errors.cantidad?.message}
-          {...register('cantidad', composeValidators(required()))}
+          error={errors.cantidad_solicitada?.message}
+          {...register('cantidad_solicitada', composeValidators(required()))}
         />
         {isAdmin && (
           <Select
-            label="Estado"
-            options={ESTADOS_ENTRADA}
-            error={errors.estado?.message}
-            {...register('estado', composeValidators(required()))}
-          />
-        )}
-        {isAdmin && (
-          <Select
             label="Filial"
-            options={filialesOptions}
+            options={[{ value: '', label: 'Seleccione una filial' }, ...filialesOptions]}
             error={errors.filial?.message}
             {...register('filial', composeValidators(required()))}
           />

@@ -13,6 +13,7 @@ import AccionDetailPage from './pages/Acciones/AccionDetailPage';
 import EntradasList from './pages/Entradas/EntradasList';
 import EntradaNew from './pages/Entradas/EntradaNew';
 import EntradasApproval from './pages/Entradas/EntradasApproval';
+import PartidosList from './pages/Partidos/PartidosList';
 import ForoHome from './pages/Foro/ForoHome';
 import CategoriaPage from './pages/Foro/CategoriaPage';
 import HiloPage from './pages/Foro/HiloPage';
@@ -21,16 +22,18 @@ import Perfil from './pages/Perfil';
 import { Layout } from './components/layout/Layout';
 import { useAuthStore } from './store/authStore';
 import { ROLES } from './utils/constants';
+import { getAccessToken } from './api/tokenStorage';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { isAuthenticated, user } = useAuthStore((state) => ({
     isAuthenticated: state.isAuthenticated,
     user: state.user,
   }));
+  const hasToken = Boolean(getAccessToken());
 
   // console.log('[ProtectedRoute] isAuthenticated:', isAuthenticated, 'requiredRole:', requiredRole, 'userRole:', user?.rol);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !hasToken) {
     return <Navigate to="/login" replace />;
   }
 
@@ -43,10 +46,11 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 
 const LoginRoute = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasToken = Boolean(getAccessToken());
 
   // console.log('[LoginRoute] isAuthenticated:', isAuthenticated);
 
-  if (isAuthenticated) {
+  if (isAuthenticated && hasToken) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -93,6 +97,9 @@ const App = () => {
                 }
               />
               <Route path=":id" element={<AccionDetailPage />} />
+            </Route>
+            <Route path="partidos">
+              <Route index element={<PartidosList />} />
             </Route>
             <Route path="entradas">
               <Route index element={<EntradasList />} />

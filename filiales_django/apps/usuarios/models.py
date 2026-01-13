@@ -25,6 +25,8 @@ class PerfilUsuario(TimeStampedModel):
         blank=True,
         related_name="perfiles",
     )
+    es_socio = models.BooleanField(default=False, db_index=True)
+    numero_socio = models.CharField(max_length=50, blank=True)
 
     class Meta:
         verbose_name = "Perfil de usuario"

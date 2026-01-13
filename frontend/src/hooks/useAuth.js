@@ -2,10 +2,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import * as authAPI from '../api/auth';
 import { useAuthStore } from '../store/authStore';
+import { getAccessToken, setTokens, clearTokens } from '../api/tokenStorage';
+
+const normalizeUser = (payload) => {
+  if (!payload) return null;
+  const baseUser = payload.user ?? payload;
+  return {
+    ...baseUser,
+    rol: payload.rol ?? payload.role ?? baseUser.rol,
+    filialId: payload.filialId ?? baseUser.filialId ?? null,
+    permisos: payload.permisos ?? baseUser.permisos ?? [],
+  };
+};
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
-  const { setUser, logout: logoutStore, user, isAuthenticated } = useAuthStore();
+  const { setUser, logout: logoutStore, user } = useAuthStore();
 
   const loginMutation = useMutation({
     mutationFn: authAPI.login,
@@ -13,12 +25,14 @@ export const useAuth = () => {
       toast.loading('Ingresando...', { id: 'auth-login' });
     },
     onSuccess: async (data) => {
-      localStorage.setItem('access_token', data.access);
-      localStorage.setItem('refresh_token', data.refresh);
-      
+      setTokens({ access: data.access, refresh: data.refresh });
+
       try {
         const currentUser = await authAPI.getCurrentUser();
-        setUser(currentUser);
+        const normalized = normalizeUser(currentUser);
+        if (normalized) {
+          setUser(normalized);
+        }
         toast.success('Bienvenido nuevamente', { id: 'auth-login' });
         queryClient.setQueryData(['me'], currentUser);
       } catch (error) {
@@ -27,7 +41,7 @@ export const useAuth = () => {
       }
     },
     onError: (error) => {
-      const message = error.response?.data?.detail || 'Credenciales inválidas';
+      const message = error.response?.data?.detail || 'Credenciales invalidas';
       toast.error(message, { id: 'auth-login' });
     },
   });
@@ -35,27 +49,32 @@ export const useAuth = () => {
   const logoutMutation = useMutation({
     mutationFn: authAPI.logout,
     onSettled: () => {
+      clearTokens();
       logoutStore();
       queryClient.clear();
-      toast.success('Sesión finalizada');
+      toast.success('Sesion finalizada');
     },
   });
 
-  // Query deshabilitado por defecto, solo se activa si hay token Y está autenticado
+  // Query deshabilitado por defecto, solo se activa si hay token
   const meQuery = useQuery({
     queryKey: ['me'],
     queryFn: authAPI.getCurrentUser,
-    enabled: Boolean(localStorage.getItem('access_token')) && isAuthenticated,
-    retry: false, // ← IMPORTANTE: No reintentar si falla
-    refetchOnWindowFocus: false, // ← No refetch al hacer focus
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    enabled: Boolean(getAccessToken()),
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
     onSuccess: (data) => {
-      setUser(data);
+      const normalized = normalizeUser(data);
+      if (normalized) {
+        setUser(normalized);
+      }
     },
     onError: (error) => {
       console.error('Error en meQuery:', error);
-      // Solo hacer logout si es error de autenticación
-      if (error.response?.status === 401) {
+      // Solo hacer logout si es error de autenticacion
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        clearTokens();
         logoutStore();
       }
     },
@@ -64,7 +83,7 @@ export const useAuth = () => {
   return {
     user: user || meQuery.data,
     isLoading: loginMutation.isPending || meQuery.isLoading,
-    login: loginMutation.mutateAsync, // ← Cambiar a mutateAsync
+    login: loginMutation.mutateAsync,
     logout: () => logoutMutation.mutate(),
     isLoggingOut: logoutMutation.isPending,
   };

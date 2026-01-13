@@ -98,7 +98,7 @@ const IntegrantesList = () => {
       header: 'Acciones',
       cell: (row) => (
         <div className="flex flex-wrap items-center gap-2">
-          {user?.rol !== ROLES.INTEGRANTE && (
+          {user?.rol !== ROLES.FILIAL && (
             <Button
               variant="secondary"
               size="sm"
@@ -110,7 +110,7 @@ const IntegrantesList = () => {
               Editar
             </Button>
           )}
-          {user?.rol !== ROLES.INTEGRANTE && (
+          {user?.rol !== ROLES.FILIAL && (
             <Button variant="ghost" size="sm" onClick={() => toggleEstado(row)}>
               {row.estado === 'ACTIVO' ? 'Desactivar' : 'Activar'}
             </Button>
@@ -144,7 +144,7 @@ const IntegrantesList = () => {
           <h1 className="text-2xl font-semibold text-slate-900">Integrantes</h1>
           <p className="text-sm text-slate-500">Gestiona los integrantes y roles de las filiales.</p>
         </div>
-        {user?.rol !== ROLES.INTEGRANTE && (
+        {user?.rol !== ROLES.FILIAL && (
           <Button leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => setIsModalOpen(true)}>
             Nuevo integrante
           </Button>
@@ -195,7 +195,7 @@ const IntegrantesList = () => {
           title="No hay integrantes para mostrar"
           description="Ajusta los filtros o crea un nuevo integrante."
           action=
-            {user?.rol !== ROLES.INTEGRANTE ? (
+            {user?.rol !== ROLES.FILIAL ? (
               <Button onClick={() => setIsModalOpen(true)}>Registrar integrante</Button>
             ) : undefined}
         />

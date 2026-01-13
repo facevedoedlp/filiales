@@ -70,7 +70,7 @@ const AccionesList = () => {
           <h1 className="text-2xl font-semibold text-slate-900">Acciones solidarias</h1>
           <p className="text-sm text-slate-500">Registro de actividades realizadas por cada filial.</p>
         </div>
-        {user?.rol !== ROLES.INTEGRANTE && (
+        {user?.rol !== ROLES.FILIAL && (
           <Button onClick={() => navigate('/acciones/nueva')}>Nueva acción</Button>
         )}
       </header>
@@ -119,7 +119,7 @@ const AccionesList = () => {
           title="No hay acciones registradas"
           description="Cuando se publiquen nuevas acciones podrás verlas aquí."
           action={
-            user?.rol !== ROLES.INTEGRANTE ? (
+            user?.rol !== ROLES.FILIAL ? (
               <Button onClick={() => navigate('/acciones/nueva')}>Registrar acción</Button>
             ) : undefined
           }

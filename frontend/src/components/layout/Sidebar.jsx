@@ -45,7 +45,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
       </div>
       <nav className="mt-6 flex flex-col gap-1">
         {links.map((link) => {
-          if (link.to === '/entradas' && user?.rol === ROLES.INTEGRANTE) {
+          if (link.to === '/entradas' && user?.rol === ROLES.FILIAL) {
             return null;
           }
           return (

@@ -23,7 +23,7 @@ const AccionDetailPage = () => {
   return (
     <div className="space-y-6">
       <AccionDetail accion={data} />
-      {user?.rol !== ROLES.INTEGRANTE && (
+      {user?.rol !== ROLES.FILIAL && (
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900">Subir imágenes adicionales</h3>
           <p className="text-xs text-slate-500">Formatos permitidos: JPG, PNG.</p>

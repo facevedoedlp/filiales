@@ -1,12 +1,43 @@
 import axios from 'axios';
+import {
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+  clearTokens,
+} from './tokenStorage';
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: API_BASE_URL,
 });
 
+const refreshClient = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+let isRefreshing = false;
+let pendingRequests = [];
+
+const subscribeTokenRefresh = (callback) => {
+  pendingRequests.push(callback);
+};
+
+const resolvePending = (token) => {
+  pendingRequests.forEach((callback) => callback(token));
+  pendingRequests = [];
+};
+
+const redirectToLogin = () => {
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+};
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = getAccessToken();
   if (token) {
+    config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -15,34 +46,60 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const { response, config } = error || {};
+    if (!response || !config) {
+      return Promise.reject(error);
+    }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+    const isAuthEndpoint =
+      config.url?.includes('/api/auth/login') ||
+      config.url?.includes('/api/auth/refresh');
 
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) {
-          throw new Error('Refresh token missing');
-        }
+    if (response.status === 401 && !config._retry && !isAuthEndpoint) {
+      config._retry = true;
 
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/refresh/`,
-          {
-            refresh: refreshToken,
-          },
-        );
-
-        localStorage.setItem('access_token', data.access);
-        originalRequest.headers.Authorization = `Bearer ${data.access}`;
-
-        return api(originalRequest);
-      } catch (refreshError) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) {
+        clearTokens();
+        redirectToLogin();
+        return Promise.reject(error);
       }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          subscribeTokenRefresh((newAccess) => {
+            if (!newAccess) {
+              return reject(error);
+            }
+            config.headers.Authorization = `Bearer ${newAccess}`;
+            resolve(api(config));
+          });
+        });
+      }
+
+      isRefreshing = true;
+      try {
+        const { data } = await refreshClient.post('/api/auth/refresh/', {
+          refresh: refreshToken,
+        });
+
+        setTokens({ access: data.access });
+        resolvePending(data.access);
+        config.headers.Authorization = `Bearer ${data.access}`;
+        return api(config);
+      } catch (refreshError) {
+        resolvePending(null);
+        clearTokens();
+        redirectToLogin();
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    if (response.status === 401 || (response.status === 403 && !getAccessToken())) {
+      clearTokens();
+      redirectToLogin();
     }
 
     return Promise.reject(error);

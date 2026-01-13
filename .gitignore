@@ -1,12 +1,62 @@
-node_modules/
-dist/
-.env
+# Python / Django
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtualenv
+venv/
+.env/
+.venv/
+ENV/
+env/
 backend/.env
 frontend/.env
-backend/src/prisma/migrations/*
-!backend/src/prisma/migrations/.gitkeep
+
+# Django
+db.sqlite3
+*.sqlite3
+staticfiles/
+media/
 uploads/
+
+# Logs
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
+Thumbs.db
+
+# Build / dist
+dist/
+build/
+
+# Node (frontend)
+node_modules/
 pnpm-lock.yaml
 yarn.lock
 package-lock.json
+
+# Frontend env/build
+frontend/dist/
+frontend/node_modules/
+
+# Docker (opcional, si no querés versionar overrides locales)
+docker-compose.override.yml
+
+# Tests / reports
+.pytest_cache/
+coverage.xml
+

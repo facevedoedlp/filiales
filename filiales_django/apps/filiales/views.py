@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from apps.auditoria.models import Accion
 from apps.core.mixins import FilialScopedQuerysetMixin
-from apps.core.permissions import IsAdminAllAccess
+from apps.core.permissions import IsAdminAllAccess, RoleBasedPermission
 from apps.core.services import dispatch_webhook, send_notification_email
 from apps.core.viewsets import BaseModelViewSet
 from apps.filiales.models import Autoridad, Filial
@@ -164,7 +164,7 @@ class AutoridadViewSet(FilialScopedQuerysetMixin, BaseModelViewSet):
     search_fields = ["persona_nombre", "persona_documento", "email"]
     ordering_fields = ["persona_nombre", "cargo", "desde"]
     scope_field = "filial"
-    permission_classes = [IsAuthenticated, IsAdminAllAccess]
+    permission_classes = [IsAuthenticated, RoleBasedPermission]
     allow_filial_user_writes = False
 
     @decorators.action(

@@ -1,13 +1,13 @@
 export const ROLES = {
-  ADMIN: 'ADMIN',
-  PRESIDENTE: 'PRESIDENTE',
-  INTEGRANTE: 'INTEGRANTE',
+  ADMIN: 'ADMINISTRADOR',
+  COORDINADOR: 'COORDINADOR',
+  FILIAL: 'USUARIO_FILIAL',
 };
 
 export const ROLES_LABELS = {
   [ROLES.ADMIN]: 'Administrador',
-  [ROLES.PRESIDENTE]: 'Presidente',
-  [ROLES.INTEGRANTE]: 'Integrante',
+  [ROLES.COORDINADOR]: 'Coordinador',
+  [ROLES.FILIAL]: 'Usuario de filial',
 };
 
 export const ESTADOS_ENTRADA = [
